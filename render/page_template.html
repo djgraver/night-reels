@@ -1,0 +1,154 @@
+<title>Dream Fog Reel</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,400;1,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a single reading column of dreams; each dream = words heard -> clip + before/after -> fog dial. Night-first. */
+:root {
+  --bg: #0e1014; --panel: #161920; --fg: #e4e3ea; --dim: #9a9aa8; --line: #2a2d38;
+  --lamp: #e8b86a; --clear: #8fc7d9; --haze: #b9a3d9; --style: #e8b86a;
+  --display: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+  --bg: #f3f2f5; --panel: #ffffff; --fg: #1b1c22; --dim: #5e5f6b; --line: #d9d8e0;
+  --lamp: #9a6514; --clear: #23708a; --haze: #6c4f9a; --style: #9a6514; color-scheme: light; } }
+:root[data-theme="light"] {
+  --bg: #f3f2f5; --panel: #ffffff; --fg: #1b1c22; --dim: #5e5f6b; --line: #d9d8e0;
+  --lamp: #9a6514; --clear: #23708a; --haze: #6c4f9a; --style: #9a6514; color-scheme: light; }
+
+body { background: var(--bg); color: var(--fg); font: 400 16px/1.6 var(--body); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 80px; display: grid; gap: 56px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 500; text-wrap: balance; margin: 0; line-height: 1.1; }
+h1 { font-size: clamp(2.6rem, 6vw, 4.4rem); font-style: italic; font-weight: 400; }
+h2 { font-size: clamp(1.7rem, 3.4vw, 2.4rem); font-style: italic; font-weight: 400; }
+h3 { font-size: 1.5rem; }
+p { margin: 0; max-width: 68ch; }
+.eyebrow { font: 500 12px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+
+.hero { display: grid; gap: 18px; }
+.hero .lede { font-size: 1.15rem; color: var(--fg); }
+.hero .note { color: var(--dim); }
+.scale { display: grid; gap: 8px; margin-top: 8px; max-width: 640px; }
+.scale .bar { height: 14px; border-radius: 7px; background: linear-gradient(90deg, var(--clear), color-mix(in srgb, var(--dim) 60%, transparent) 55%, var(--haze)); }
+.scale .ticks { display: flex; justify-content: space-between; font: 12px/1.3 var(--mono); color: var(--dim); gap: 8px; }
+.scale .ticks span { max-width: 30%; }
+.scale .ticks span:nth-child(2) { text-align: center; }
+.scale .ticks span:last-child { text-align: right; }
+
+.sec-head { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 28px; }
+.sec-head p { color: var(--dim); }
+
+.dream { display: grid; gap: 18px; }
+.dream-head { display: grid; gap: 12px; }
+blockquote { margin: 0; font-family: var(--display); font-size: 1.3rem; line-height: 1.45; color: var(--fg); max-width: 62ch; border-left: 2px solid var(--line); padding-left: 16px; }
+.cues, .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.lbl { font: 500 11px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin-right: 4px; }
+.cue { font: 13px/1 var(--mono); padding: 5px 8px; border-radius: 4px; background: transparent; border: 1px solid currentColor; }
+.cue.clear { color: var(--clear); } .cue.hazy { color: var(--haze); } .cue.style { color: var(--style); }
+.cue.dark { color: var(--fg); background: color-mix(in srgb, var(--fg) 8%, transparent); border-style: dashed; } .cue.light { color: var(--clear); border-style: dashed; }
+.none { font-size: 13px; color: var(--dim); }
+.chip { font: 13px/1 var(--mono); padding: 6px 9px; border-radius: 4px; background: var(--panel); border: 1px solid var(--line); display: inline-flex; gap: 6px; }
+.chip i { font-style: normal; color: var(--dim); }
+.why { color: var(--dim); font-size: .95rem; }
+
+.media { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 760px) { .media { grid-template-columns: 1fr; } }
+figure { margin: 0; display: grid; gap: 6px; min-width: 0; }
+figcaption { font: 12px/1.3 var(--mono); color: var(--dim); }
+video, .compare img, .dial img { width: 100%; max-width: 100%; display: block; border-radius: 6px; background: #000; aspect-ratio: 16 / 9; object-fit: cover; }
+.compare { position: relative; }
+.compare .top { position: absolute; inset: 0 0 auto 0; clip-path: inset(0 0 0 var(--pos)); }
+.compare input { position: absolute; inset: 0 0 auto 0; width: 100%; aspect-ratio: 16 / 9; margin: 0; opacity: 0; cursor: ew-resize; }
+.compare::after { content: ""; position: absolute; top: 0; left: var(--pos); width: 2px; aspect-ratio: auto; height: calc(100% - 24px); background: var(--lamp); pointer-events: none; }
+.compare figcaption { display: flex; justify-content: space-between; }
+.compare input:focus-visible + figcaption { color: var(--lamp); }
+.dial img { aspect-ratio: 64 / 9; }
+.dial-scale { display: grid; grid-template-columns: repeat(4, 1fr); }
+
+.stages { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.stage { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.stage b { font: 500 13px/1.2 var(--mono); color: var(--lamp); }
+.stage p { color: var(--dim); font-size: .93rem; }
+table { border-collapse: collapse; width: 100%; font-size: .93rem; }
+.tbl { overflow-x: auto; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 500 12px/1.2 var(--mono); color: var(--dim); text-transform: uppercase; letter-spacing: .08em; }
+td code, p code { font: 13px var(--mono); color: var(--lamp); }
+td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pending { color: var(--dim); }
+@media (prefers-reduced-motion: reduce) { video { display: none; } }
+</style>
+
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Dream Log Visualiser · render pipeline, second pass</span>
+    <h1>Dream Fog Reel</h1>
+    <p class="lede">Thirteen dreams, each turned from words into a short low-framerate clip and a still. The base footage should look like real footage. The fog on top depends on how clearly the dreamer says they remember it.</p>
+    <p class="note">This sandbox has no image or video generation model, so the base footage is path-traced 3D (Blender Cycles, all procedural) with a true depth pass. The fog stage, the spec and the clip assembly are the parts meant to carry over to production, where a generative model replaces the 3D scenes.</p>
+    <div class="scale" aria-label="Fog scale">
+      <div class="bar"></div>
+      <div class="ticks"><span>0.08 · "crystal clear", 12 fps</span><span>0.55 · a typical dream, 8 fps</span><span>0.90 · "really hazy", 6 fps</span></div>
+    </div>
+  </section>
+
+  <section class="sec-head">
+    <span class="eyebrow">New · fog tone</span>
+    <h3>Dream fog can be black, and it can change partway through</h3>
+    <p>The tone of the fog now comes from the dream itself. Dread, smoke, darkness and being chased push it toward black. Calm, warm and bright push it toward pale. Each beat of the dream ("then", "suddenly", a new sentence) is scored on its own, so a dream that turns can turn the fog with it. Dashed tags show the words that set the tone.</p>
+  </section>
+  <!--TONE-->
+
+  <section class="sec-head">
+    <span class="eyebrow">Seven test dreams</span>
+    <h3>Written to exercise the rules: one clear, one black and white, one tinted, one vivid, three foggy</h3>
+    <p>Drag across each still to compare the render with the dream pass. The strip underneath shows the same frame at four fog levels, which is the dial the dreamer's words move.</p>
+  </section>
+  <!--EXAMPLES-->
+
+  <section class="sec-head">
+    <span class="eyebrow">The app's example dreams</span>
+    <h3>Rendered from the app's dream spec, so the app can show them in place of its live preview</h3>
+    <p>Multi-scene dreams get one shot per scene, each surfacing out of fog and sinking back into it.</p>
+  </section>
+  <!--APP-->
+
+  <section class="sec-head">
+    <span class="eyebrow">How a dream becomes a clip</span>
+    <h3>Five stages</h3>
+  </section>
+  <div class="stages">
+    <div class="stage"><b>parse</b><p>Reads clarity words ("crystal clear" up, "hazy", "couldn't see" down, negation aware), style words (black and white, sepia, film, VHS, vivid), colour tints, setting, light, people and motion.</p></div>
+    <div class="stage"><b>base footage</b><p>Builds one of nine 3D scenes and renders 14 to 22 frames along a slow camera path, plus a depth pass and the subject's screen position.</p></div>
+    <div class="stage"><b>dream pass</b><p>Depth fog that lights glow through, a clear "attention island" around the subject, soft periphery, slow warping, bloom and halation, milky blacks, desaturation, grain.</p></div>
+    <div class="stage"><b>styles</b><p>Only when named: mono with film black point, flicker and dust; noir; sepia; VHS chroma bleed; vivid; pastel; colour tints.</p></div>
+    <div class="stage"><b>clip</b><p>6 to 12 fps with irregular holds, echo trails and double exposures between frames, fog still drifting under held frames, fade from fog and back.</p></div>
+  </div>
+
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Fog</th><th>What changes</th></tr></thead>
+      <tbody>
+        <tr><td class="num">0.08</td><td>Fog half-distance about 25 times the scene's median depth, barely any blur or warp, saturation slightly up, 12 fps, light grain. Reads as footage.</td></tr>
+        <tr><td class="num">0.55</td><td>Fog half-distance about 3.5 times median depth, periphery softens, lights bloom, colour drops about 20%, 8 fps, echo trails.</td></tr>
+        <tr><td class="num">0.90</td><td>Fog closes in to about the median depth, edges dissolve into the fog colour, shapes wobble, 6 fps, heavy echo. Only the subject stays readable.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <section class="sec-head">
+    <span class="eyebrow">For production</span>
+    <h3>What to swap, what to keep</h3>
+    <p>Keep the dream pass, the spec and the clip assembly. Replace the 3D scenes with a text-to-image model (FLUX or SDXL class) prompted for plain photographic footage, then image-to-video (Veo, Kling, Runway or Wan class) for 4 to 6 seconds of slow camera, or a cheaper depth-based parallax. Run Depth Anything V2 on the generated frames to feed the fog. Let Claude fill the dream spec, with this rule-based parser as the offline fallback. Port the dream pass to a GPU shader so the app can preview fog changes live.</p>
+    <p>Code and every output: <code>render/</code> in the night-reels repo (README inside).</p>
+  </section>
+</main>
+
+<script>
+document.querySelectorAll(".compare input").forEach(function (r) {
+  var f = r.closest(".compare");
+  r.addEventListener("input", function () { f.style.setProperty("--pos", r.value + "%"); });
+});
+</script>

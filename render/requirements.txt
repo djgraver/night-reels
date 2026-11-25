@@ -1,0 +1,13 @@
+# Core pipeline (ffmpeg must also be on PATH)
+bpy==5.3.0
+numpy
+opencv-python-headless
+OpenEXR
+# Content rating with Claude (optional; the offline rules rater runs without it)
+anthropic
+# Tests
+pytest
+# Faces prototype (optional; also run fetch_face_models.sh and apt-get install libegl1 libgles2)
+# mediapipe
+# onnxruntime
+# scikit-image

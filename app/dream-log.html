@@ -1,0 +1,1397 @@
+<title>Dream Log Visualiser</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a night journal. One calm column on phones; on wide screens the log sits left, the dream plays right, the journal runs underneath.
+   Deliberately single dark theme: this is an app you open in bed. */
+:root{
+  --night:#0e1120;      /* page ground, ink indigo */
+  --deep:#161a2c;       /* raised surfaces */
+  --deeper:#1d2238;     /* inputs */
+  --mist:#d3d6e0;       /* body text */
+  --dim:#8d93aa;        /* secondary text */
+  --faint:#5b6180;      /* tertiary, hairlines */
+  --moth:#e5d2a3;       /* accent: candle / moth-wing */
+  --moth-ink:#1a1608;   /* text on accent */
+  --line:rgba(211,214,224,.11);
+  --k-clarity:#9cc6dc; --k-style:#e0a9c6; --k-mood:#b9b2ee; --k-setting:#a8c99c; --k-motion:#e7b47c; --k-light:#d9cf8e;
+  --f-display:"Instrument Serif","Iowan Old Style","Georgia",serif;
+  --f-body:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--night);color:var(--mist)}
+body{font-family:var(--f-body);font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px;
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(120,130,190,.14), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(229,210,163,.06), transparent 60%),
+    var(--night);
+  min-height:100%;
+}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-top:8px}
+.brand h1{font-family:var(--f-display);font-weight:400;font-size:clamp(34px,6vw,52px);line-height:1;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.brand h1 em{color:var(--moth)}
+.brand p{margin:8px 0 0;color:var(--dim);max-width:46ch}
+.clock{font-family:var(--f-mono);font-size:12px;color:var(--faint);letter-spacing:.06em;text-transform:uppercase}
+
+.grid{display:grid;grid-template-columns:1fr;gap:24px}
+@media (min-width:920px){.grid{grid-template-columns:minmax(0,5fr) minmax(0,6fr);align-items:start}}
+
+.panel{background:var(--deep);border:1px solid var(--line);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:0}
+h2{font-family:var(--f-display);font-weight:400;font-size:28px;line-height:1.1;margin:0;text-wrap:balance}
+
+/* Log */
+.composer{position:relative;background:var(--deeper);border:1px solid var(--line);border-radius:14px;transition:border-color .2s}
+.composer:focus-within{border-color:rgba(229,210,163,.45)}
+textarea#dreamText{display:block;width:100%;min-height:190px;resize:vertical;background:transparent;border:0;outline:0;color:var(--mist);
+  font-family:var(--f-display);font-size:21px;line-height:1.45;padding:16px 16px 8px}
+textarea#dreamText::placeholder{color:var(--faint);font-style:italic}
+.partial{padding:0 16px 10px;font-family:var(--f-display);font-style:italic;font-size:19px;color:var(--dim);min-height:0}
+.composer-bar{display:flex;align-items:center;gap:10px;padding:8px 10px 10px;border-top:1px solid var(--line);flex-wrap:wrap}
+.mic{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:transparent;color:var(--mist);border-radius:999px;padding:8px 14px 8px 10px;font:600 14px var(--f-body);cursor:pointer}
+.mic:hover{border-color:var(--dim)}
+.mic .dot{width:22px;height:22px;border-radius:50%;background:var(--moth);display:grid;place-items:center}
+.mic .dot svg{width:12px;height:12px;fill:var(--moth-ink)}
+.mic[data-state="listening"]{border-color:var(--moth);color:var(--moth)}
+.mic[data-state="listening"] .dot{animation:breathe 1.6s ease-in-out infinite}
+@keyframes breathe{0%,100%{box-shadow:0 0 0 0 rgba(229,210,163,.5)}50%{box-shadow:0 0 0 8px rgba(229,210,163,0)}}
+.count{margin-left:auto;font-family:var(--f-mono);font-size:12px;color:var(--faint)}
+.hint{font-size:13px;color:var(--dim);margin:0}
+.examples{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.examples span{font-size:13px;color:var(--dim)}
+.chipbtn{border:1px dashed var(--faint);background:transparent;color:var(--dim);border-radius:999px;padding:5px 12px;font:500 13px var(--f-body);cursor:pointer}
+.chipbtn:hover{color:var(--mist);border-color:var(--dim)}
+
+.cues{display:flex;flex-wrap:wrap;gap:6px;min-height:28px}
+.cue{display:inline-flex;align-items:baseline;gap:6px;border-radius:8px;padding:4px 9px;font-size:13px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
+.cue b{font-weight:600;color:var(--kc)}
+.cue i{font-style:normal;color:var(--dim);font-family:var(--f-mono);font-size:11.5px}
+.cue[data-k="clarity"]{--kc:var(--k-clarity)} .cue[data-k="style"]{--kc:var(--k-style)} .cue[data-k="mood"]{--kc:var(--k-mood)}
+.cue[data-k="setting"]{--kc:var(--k-setting)} .cue[data-k="motion"]{--kc:var(--k-motion)} .cue[data-k="light"]{--kc:var(--k-light)}
+.cues .empty{color:var(--faint);font-size:13px;font-style:italic}
+
+.primary{appearance:none;border:0;background:var(--moth);color:var(--moth-ink);font:700 15px var(--f-body);border-radius:12px;padding:14px 20px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:10px}
+.primary:hover{filter:brightness(1.06)}
+.primary:disabled{opacity:.45;cursor:not-allowed}
+.ghost{appearance:none;border:1px solid var(--line);background:transparent;color:var(--mist);font:600 13px var(--f-body);border-radius:10px;padding:8px 12px;cursor:pointer}
+.ghost:hover{border-color:var(--dim)}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--moth);outline-offset:2px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.toggle{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--dim)}
+.toggle input{accent-color:var(--moth)}
+
+/* Player */
+.player{position:relative;border-radius:14px;overflow:hidden;background:#05060c;aspect-ratio:4/3;max-width:100%}
+.player canvas{display:block;width:100%;height:100%}
+.player.has-video{aspect-ratio:16/9}
+.player video,.player img.result{display:block;width:100%;height:100%;object-fit:cover}
+.overlay-top{position:absolute;left:0;right:0;top:0;display:flex;justify-content:space-between;gap:8px;padding:10px 12px;pointer-events:none;
+  font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.66);
+  background:linear-gradient(rgba(0,0,0,.35),transparent)}
+.overlay-bottom{position:absolute;left:0;right:0;bottom:0;padding:28px 14px 12px;background:linear-gradient(transparent,rgba(0,0,0,.55));
+  font-family:var(--f-display);font-style:italic;font-size:clamp(15px,2.2vw,19px);color:rgba(255,255,255,.86);line-height:1.3}
+.overlay-bottom span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rec{display:inline-flex;align-items:center;gap:6px}
+.rec::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--moth)}
+.paused .rec::before{background:var(--faint)}
+.reading-bar{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--dim)}
+.spinner{width:14px;height:14px;border-radius:50%;border:2px solid var(--faint);border-top-color:var(--moth);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.scenes{display:flex;gap:6px;flex-wrap:wrap}
+.scene-pill{border:1px solid var(--line);background:transparent;color:var(--dim);border-radius:8px;padding:6px 10px;font:500 12.5px var(--f-body);cursor:pointer;max-width:100%;text-align:left}
+.scene-pill[aria-current="true"]{color:var(--night);background:var(--mist);border-color:var(--mist)}
+
+.dials{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:10px}
+.dial{border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.dial label{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);display:flex;justify-content:space-between;gap:6px}
+.dial output{color:var(--mist);font-variant-numeric:tabular-nums}
+.dial input[type=range]{width:100%;accent-color:var(--moth)}
+.dial select{width:100%;background:var(--deeper);color:var(--mist);border:1px solid var(--line);border-radius:8px;padding:6px;font:500 13px var(--f-body)}
+.why{font-size:12px;color:var(--faint);min-height:1em}
+.why.tuned{color:var(--moth)}
+
+.transcript{font-family:var(--f-display);font-size:19px;line-height:1.5;color:var(--mist);margin:0;overflow-wrap:anywhere}
+.transcript mark{background:transparent;color:inherit;border-bottom:2px solid var(--kc);padding-bottom:1px}
+.transcript mark[data-k="clarity"]{--kc:var(--k-clarity)} .transcript mark[data-k="style"]{--kc:var(--k-style)} .transcript mark[data-k="mood"]{--kc:var(--k-mood)}
+.transcript mark[data-k="setting"]{--kc:var(--k-setting)} .transcript mark[data-k="motion"]{--kc:var(--k-motion)} .transcript mark[data-k="light"]{--kc:var(--k-light)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--dim)}
+.legend span::before{content:"";display:inline-block;width:14px;height:2px;margin-right:6px;vertical-align:middle;background:var(--kc)}
+
+details.spec{border:1px solid var(--line);border-radius:12px;padding:0 14px}
+details.spec summary{cursor:pointer;padding:12px 0;font-weight:600;font-size:14px;display:flex;justify-content:space-between;gap:10px;align-items:center;list-style:none}
+details.spec summary::-webkit-details-marker{display:none}
+details.spec summary::after{content:"+";font-family:var(--f-mono);color:var(--dim)}
+details.spec[open] summary::after{content:"–"}
+.code{overflow-x:auto;max-height:340px;margin:0 0 12px;background:#0a0c17;border-radius:10px;padding:12px;font:12px/1.5 var(--f-mono);color:#b9c0d6;white-space:pre}
+.seam{font-size:13px;color:var(--dim);margin:0 0 12px}
+
+.feedback{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:14px}
+#viewSwitch button[aria-pressed="true"],.feedback .row button[aria-pressed="true"]{background:var(--mist);color:var(--night);border-color:var(--mist)}
+
+/* Journal */
+.journal{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.entry{appearance:none;text-align:left;border:1px solid var(--line);background:var(--deep);color:var(--mist);border-radius:14px;padding:0;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;min-width:0;font:inherit}
+.entry:hover{border-color:var(--faint)}
+.entry[aria-current="true"]{border-color:var(--moth)}
+.entry .thumb{aspect-ratio:4/3;width:100%;background:#05060c;display:block;object-fit:cover}
+.entry .meta{padding:10px 12px 12px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.entry .t{font-family:var(--f-display);font-size:19px;line-height:1.2}
+.entry .s{font-size:12.5px;color:var(--dim);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tag{font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.section-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.note{font-size:12.5px;color:var(--faint);margin:0}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--mist);color:var(--night);padding:10px 16px;border-radius:10px;font-weight:600;font-size:14px;z-index:20}
+/* people */
+:root{--k-people:#f0a58f}
+.cue[data-k="people"]{--kc:var(--k-people)} .transcript mark[data-k="people"]{--kc:var(--k-people)}
+.people-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.pcard{border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--deeper);min-width:0}
+.pcard .who{display:flex;gap:12px;align-items:center;min-width:0}
+.pcard .who>label,.pcard .who>div{flex:1;min-width:0}
+.avatar{width:56px;height:56px;border-radius:50%;flex:none;background:var(--deep) center/cover no-repeat;border:1px solid var(--line);display:inline-grid;place-items:center;color:var(--faint);font:600 18px var(--f-body)}
+.pcard input[type=text],.pcard select{width:100%;background:var(--deep);color:var(--mist);border:1px solid var(--line);border-radius:8px;padding:7px 8px;font:500 14px var(--f-body);min-width:0}
+.pcard label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--dim)}
+.consent{font-size:12.5px;line-height:1.4;color:var(--dim);display:flex;gap:8px;align-items:flex-start}
+.consent input{margin-top:2px;accent-color:var(--moth);flex:none}
+.ptag{align-self:flex-start;font-size:11.5px;padding:2px 9px;border-radius:999px;border:1px solid var(--line);color:var(--dim)}
+.ptag[data-ok="1"]{color:var(--night);background:var(--k-people);border-color:var(--k-people)}
+.whoin{display:flex;flex-wrap:wrap;gap:8px}
+.whoin .wp{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:3px 12px 3px 3px;font-size:13px;max-width:100%}
+.whoin .wp .avatar{width:26px;height:26px;font-size:11px}
+.whoin .wp i{color:var(--faint);font-style:normal}
+.fileb{position:relative;overflow:hidden;display:inline-flex;align-items:center}
+.fileb input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.fileb:focus-within{outline:2px solid var(--moth);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){.mic[data-state="listening"] .dot,.spinner{animation:none}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <p class="eyebrow">Dream log · prototype</p>
+      <h1>What did you <em>dream</em>?</h1>
+      <p>Say it or type it while it's still there. We'll show it back to you the way dreams look: real, but fogged.</p>
+    </div>
+    <div class="clock" id="clock"></div>
+  </header>
+
+  <div class="grid">
+    <!-- LOG -->
+    <section class="panel" aria-labelledby="logH">
+      <div>
+        <p class="eyebrow">Log</p>
+        <h2 id="logH">Tell it what you remember</h2>
+      </div>
+      <div class="composer">
+        <label for="dreamText" class="eyebrow" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Your dream</label>
+        <textarea id="dreamText" placeholder="I was in a house I didn't recognise, but it was mine…"></textarea>
+        <div class="partial" id="partial" hidden></div>
+        <div class="composer-bar">
+          <button class="mic" id="micBtn" type="button" data-state="idle" hidden>
+            <span class="dot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12h-2Z"/></svg></span>
+            <span id="micLabel">Speak it</span>
+          </button>
+          <span class="hint" id="micNote"></span>
+          <span class="count" id="count">0 words</span>
+        </div>
+      </div>
+      <div class="examples">
+        <span>Try one:</span>
+        <button class="chipbtn" type="button" data-ex="0">Endless hallway</button>
+        <button class="chipbtn" type="button" data-ex="1">Black-and-white chase</button>
+        <button class="chipbtn" type="button" data-ex="2">Clear field at sunset</button>
+      </div>
+      <div>
+        <p class="eyebrow" style="margin-bottom:8px">What we're picking up</p>
+        <div class="cues" id="liveCues"><span class="empty">Cues appear as you write: how clear it was, colour or style, mood, places, movement.</span></div>
+      </div>
+      <div class="row">
+        <button class="primary" id="goBtn" type="button" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9a9 9 0 0 0 8.95-8.05A6.5 6.5 0 0 1 12 3Z"/></svg>
+          Visualise this dream
+        </button>
+        <label class="toggle" id="claudeToggleWrap" hidden><input type="checkbox" id="claudeToggle" checked> Let Claude read it closely</label>
+      </div>
+    </section>
+
+    <!-- RESULT -->
+    <section class="panel" id="result" aria-labelledby="resH">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Your dream</p>
+          <h2 id="resH">—</h2>
+        </div>
+        <div class="row">
+          <button class="ghost" id="playBtn" type="button">Pause</button>
+          <button class="ghost" id="reseedBtn" type="button" title="Same dream, different take">Another take</button>
+        </div>
+      </div>
+      <div class="player" id="player">
+        <canvas id="stage" width="384" height="288" aria-label="Generated dream"></canvas>
+        <video id="clip" hidden loop muted playsinline aria-label="Rendered dream video"></video>
+        <div class="overlay-top"><span class="rec" id="recLabel">Dreaming</span><span id="fpsLabel">8 fps</span></div>
+        <div class="overlay-bottom"><span id="sceneCaption"></span></div>
+      </div>
+      <div class="reading-bar" id="readingBar" hidden><span class="spinner"></span><span id="readingText">Claude is reading your dream…</span></div>
+      <div class="row" id="viewSwitch" hidden><button class="ghost" type="button" id="vRendered" aria-pressed="true">Rendered video</button><button class="ghost" type="button" id="vPreview" aria-pressed="false">Live preview</button></div>
+      <div class="scenes" id="scenes" aria-label="Scenes"></div>
+      <div id="whoWrap" hidden><p class="eyebrow" style="margin-bottom:8px">Who was there</p><div class="whoin" id="whoIn"></div></div>
+
+      <div>
+        <p class="eyebrow" style="margin-bottom:8px">How it should look</p>
+        <div class="dials">
+          <div class="dial"><label for="dFog">Fog <output id="oFog"></output></label><input type="range" id="dFog" min="0" max="100" step="1"><span class="why" id="wFog"></span></div>
+          <div class="dial"><label for="dFps">Frames <output id="oFps"></output></label><input type="range" id="dFps" min="4" max="24" step="1"><span class="why" id="wFps"></span></div>
+          <div class="dial"><label for="dTone">Fog colour <output id="oTone"></output></label><input type="range" id="dTone" min="0" max="100" step="1"><span class="why" id="wTone"></span></div>
+          <div class="dial"><label for="dGrain">Grain <output id="oGrain"></output></label><input type="range" id="dGrain" min="0" max="100" step="1"><span class="why" id="wGrain"></span></div>
+          <div class="dial"><label for="dSmear">Echo <output id="oSmear"></output></label><input type="range" id="dSmear" min="0" max="85" step="1"><span class="why" id="wSmear"></span></div>
+          <div class="dial"><label for="dStyle">Style</label>
+            <select id="dStyle">
+              <option value="natural">Natural, muted</option><option value="mono">Black &amp; white</option><option value="noir">Noir</option>
+              <option value="sepia">Sepia</option><option value="vhs">Home video</option><option value="vivid">Vivid colour</option><option value="pastel">Pastel</option>
+            </select><span class="why" id="wStyle"></span></div>
+        </div>
+      </div>
+
+      <div>
+        <p class="eyebrow" style="margin-bottom:8px">What you said</p>
+        <p class="transcript" id="transcript"></p>
+        <div class="legend" style="margin-top:10px">
+          <span style="--kc:var(--k-clarity)">clarity</span><span style="--kc:var(--k-style)">style</span><span style="--kc:var(--k-mood)">mood</span>
+          <span style="--kc:var(--k-setting)">place &amp; things</span><span style="--kc:var(--k-light)">light</span><span style="--kc:var(--k-motion)">movement</span><span style="--kc:var(--k-people)">people</span>
+        </div>
+      </div>
+
+      <div class="feedback">
+        <p class="eyebrow">Does this feel like your dream?</p>
+        <div class="row" id="fbRow">
+          <button class="ghost" type="button" data-fb="no" aria-pressed="false">Not really</button>
+          <button class="ghost" type="button" data-fb="some" aria-pressed="false">Partly</button>
+          <button class="ghost" type="button" data-fb="yes" aria-pressed="false">That's it</button>
+        </div>
+        <p class="note">Kept for this session only, ready for the real-person tests.</p>
+      </div>
+
+      <details class="spec">
+        <summary>Dream spec sent to the render pipeline</summary>
+        <p class="seam">This is the whole hand-off. The preview above is drawn in your browser by a placeholder renderer; the real pipeline takes this same spec and returns a video. <span id="readBy"></span></p>
+        <div class="row" style="margin-bottom:10px"><button class="ghost" id="copySpec" type="button">Copy spec</button></div>
+        <pre class="code" id="specOut"></pre>
+      </details>
+    </section>
+  </div>
+
+  <section class="panel" aria-labelledby="pH" id="peoplePanel">
+    <div class="section-head">
+      <div><p class="eyebrow">People</p><h2 id="pH">Faces you might dream about</h2></div>
+      <button class="ghost" id="forgetPhotos" type="button">Forget all photos</button>
+    </div>
+    <p class="note" style="font-size:13.5px;color:var(--dim);max-width:70ch">Add yourself and the people who turn up in your dreams. When you mention them ("my dad", "Sarah"), they appear the way you remember them: their own face, a different face that is still them, a face that won't come into focus, or none. Photos stay in this page's memory and are gone when you close it; the dream spec only ever names them. Best photo: head and shoulders, facing the camera, mouth closed, neutral expression (a smiling photo tends to keep smiling in every dream).</p>
+    <div class="people-grid" id="peopleGrid"></div>
+    <div class="row"><button class="ghost" id="addPerson" type="button">+ Add a person</button></div>
+  </section>
+
+  <section aria-labelledby="jH" style="display:flex;flex-direction:column;gap:14px">
+    <div class="section-head">
+      <div><p class="eyebrow">Journal</p><h2 id="jH">Nights so far</h2></div>
+      <p class="note">Nothing is saved yet. This list lasts until you close the page.</p>
+    </div>
+    <div class="journal" id="journal"></div>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+"use strict";
+/* =====================================================================
+   DREAM SPEC  (v1)  — the seam between this app and the render pipeline
+   ---------------------------------------------------------------------
+   {
+     version: 1,
+     id, created_at,
+     input:   { mode: "voice"|"text", transcript },
+     title, summary,
+     look: {               // global treatment, from what the dreamer said
+       fog: 0..1,          // 0 = clear, 1 = almost nothing visible
+       fps: 4..24,         // low = dreamlike stutter
+       grain: 0..1, echo: 0..1 (frame ghosting), vignette: 0..1,
+       style: natural|mono|noir|sepia|vhs|vivid|pastel,
+       saturation: 0..1.5, tint: "#rrggbb"|null,
+       light: night|dusk|dawn|day|overcast|underwater|interior
+     },
+     mood: [ "fear"|"calm"|"sad"|"joy"|"uncanny"|"longing" ],
+     scenes: [ { text, setting, elements[], light, motion, duration_s } ],
+     cues:   [ { kind, phrase, effect, at:[start,end] } ],   // why the look is what it is
+     prompt, negative_prompt,          // for text-to-image / text-to-video models
+     overrides: { ...look keys the dreamer tuned by hand },
+     seed
+   }
+   ===================================================================== */
+
+const SETTINGS = ["corridor","room","water","city","forest","field","mountains","open","underwater"];
+const ELEMENTS = ["moon","sun","stars","house","door","stairs","figure","crowd","birds","rain","snow","trees","road","glow"];
+const LIGHTS = ["night","dusk","dawn","day","overcast","underwater","interior"];
+const MOTIONS = ["drift","falling","flying","chase","recede"];
+const STYLES = ["natural","mono","noir","sepia","vhs","vivid","pastel"];
+
+/* ---------- lexicon: regex → cue ---------- */
+const W = s => new RegExp("\\b(?:" + s + ")\\b", "gi");
+const LEX = [
+  // clarity
+  {k:"clarity", v:"high", re:W("crystal[- ]clear|clear as day|vivid(?:ly)?|sharp|in focus|high[- ]def(?:inition)?|hd|lucid|every (?:little )?detail|super clear|really clear|so clear|clearly|realistic|like real life|like it was real|perfectly clear"), effect:"less fog"},
+  {k:"clarity", v:"low", re:W("hazy|haze|blurry|blurred|blur|foggy|fog|misty|mist|fuzzy|vague(?:ly)?|murky|dim(?:ly)?|faded|can'?t remember|don'?t remember|barely (?:see|remember)|couldn'?t see|out of focus|smudged|cloudy"), effect:"more fog"},
+  // style
+  {k:"style", v:"mono", re:W("black (?:and|&) white|b ?& ?w|monochrome|grey ?scale|gray ?scale|no colou?rs?|colou?rless"), effect:"black & white"},
+  {k:"style", v:"noir", re:W("film noir|noir|like an old (?:detective )?film"), effect:"noir contrast"},
+  {k:"style", v:"sepia", re:W("sepia|old photo(?:graph)?s?|vintage|brownish|faded photo"), effect:"sepia"},
+  {k:"style", v:"vhs", re:W("vhs|camcorder|home video|old tape|video tape|static"), effect:"home video"},
+  {k:"style", v:"vivid", re:W("technicolou?r|saturated|vibrant|neon|super colou?rful|so colou?rful|bright colou?rs"), effect:"vivid colour"},
+  {k:"style", v:"pastel", re:W("pastel|soft colou?rs|candy colou?red"), effect:"pastel"},
+  // light
+  {k:"light", v:"night", re:W("night|midnight|dark(?:ness)?|pitch black|moonlight|nighttime"), effect:"night"},
+  {k:"light", v:"dusk", re:W("sunset|dusk|evening|twilight|golden hour"), effect:"dusk"},
+  {k:"light", v:"dawn", re:W("dawn|sunrise|early morning"), effect:"dawn"},
+  {k:"light", v:"day", re:W("sunny|daylight|daytime|midday|noon|afternoon|bright day|morning"), effect:"daylight"},
+  {k:"light", v:"underwater", re:W("underwater|under the water|under the sea|drowning|beneath the (?:sea|water|surface)"), effect:"underwater"},
+  // setting (scene-level)
+  {k:"setting", v:"corridor", re:W("hallways?|corridors?|hall"), effect:"corridor"},
+  {k:"setting", v:"room", re:W("room|bedroom|kitchen|classroom|school|office|inside|indoors|bathroom|attic|basement"), effect:"room"},
+  {k:"setting", v:"water", re:W("sea|ocean|beach|lake|river|waves?|shore|swimming|pool"), effect:"water"},
+  {k:"setting", v:"city", re:W("city|streets?|buildings?|town|downtown|skyscrapers?|alley"), effect:"city"},
+  {k:"setting", v:"forest", re:W("forest|woods|woodland|jungle"), effect:"forest"},
+  {k:"setting", v:"field", re:W("field|meadow|grass|farm|garden|park|lawn"), effect:"field"},
+  {k:"setting", v:"mountains", re:W("mountains?|hills?|cliffs?|valley"), effect:"mountains"},
+  // elements (scene-level)
+  {k:"setting", v:"+moon", re:W("moon"), effect:"moon"},
+  {k:"setting", v:"+sun", re:W("sun"), effect:"sun"},
+  {k:"setting", v:"+stars", re:W("stars|starry"), effect:"stars"},
+  {k:"setting", v:"+house", re:W("house|home|cottage|cabin"), effect:"house"},
+  {k:"setting", v:"+door", re:W("doors?|doorway|gate"), effect:"door"},
+  {k:"setting", v:"+stairs", re:W("stairs|staircase|steps|ladder|stairway"), effect:"stairs"},
+  {k:"setting", v:"+figure", re:W("someone|somebody|person|man|woman|stranger|figure|mother|mom|mum|father|dad|brother|sister|friend|grandmother|grandma|gran|grandfather|grandad|grandpa|boy|girl|child|teacher|husband|wife|partner|boyfriend|girlfriend"), effect:"a figure"},
+  {k:"setting", v:"+crowd", re:W("crowd|people|everyone|audience|strangers|party"), effect:"crowd"},
+  {k:"setting", v:"+birds", re:W("birds?|crows?|flock|seagulls?|owl"), effect:"birds"},
+  {k:"setting", v:"+rain", re:W("rain|raining|rainy|storm|stormy"), effect:"rain"},
+  {k:"setting", v:"+snow", re:W("snow|snowing|snowy|ice"), effect:"snow"},
+  {k:"setting", v:"+trees", re:W("trees?|tree"), effect:"trees"},
+  {k:"setting", v:"+road", re:W("road|car|driving|highway|path|train tracks?"), effect:"road"},
+  {k:"setting", v:"+glow", re:W("light|glow|glowing|shining|lamp"), effect:"glow"},
+  // motion
+  {k:"motion", v:"falling", re:W("falling|fell|fall|dropping|sinking"), effect:"falling"},
+  {k:"motion", v:"flying", re:W("flying|flew|fly|floating|floated|float|hovering"), effect:"flying"},
+  {k:"motion", v:"chase", re:W("chased|chasing|following me|followed|running away|ran away|running|ran|escape|hunted"), effect:"chase"},
+  {k:"motion", v:"recede", re:W("longer and longer|kept getting longer|getting longer|endless|never[- ]ending|further away|stretch(?:ed|ing)|couldn'?t reach|never got closer"), effect:"receding"},
+  {k:"motion", v:"slow", re:W("slow[- ]?motion|slowly|in slow"), effect:"slower frames"},
+  {k:"motion", v:"fast", re:W("fast|rushing|racing|quickly|sped|speeding"), effect:"quicker frames"},
+  // mood
+  {k:"mood", v:"fear", re:W("scared|afraid|terrified|fear|panic(?:king)?|frightened|nightmare|scary|creepy|trapped|horror"), effect:"fear"},
+  {k:"mood", v:"calm", re:W("calm|peaceful|serene|quiet|safe|relaxed|gentle"), effect:"calm"},
+  {k:"mood", v:"sad", re:W("sad|crying|cried|lonely|alone|grief|lost|missing"), effect:"sadness"},
+  {k:"mood", v:"joy", re:W("happy|joy|laughing|laughed|excited|wonderful|amazing|beautiful"), effect:"joy"},
+  {k:"mood", v:"uncanny", re:W("weird|strange|wrong|uncanny|familiar|didn'?t recogni[sz]e|unfamiliar|but it wasn'?t|somehow"), effect:"uncanny"},
+  {k:"mood", v:"longing", re:W("miss(?:ed)?|wanted to|longing|waving|reach(?:ing)?|far away|passed away|died"), effect:"longing"},
+];
+const COLOR_WORDS = {red:"#b2423a",blue:"#3a5fb2",green:"#3e8a55",purple:"#6b45a8",gold:"#c49a3a",golden:"#c49a3a",orange:"#c4702f",pink:"#c86a95",yellow:"#c8b23a",teal:"#2f8a86",violet:"#6b45a8",crimson:"#9e2a3a"};
+const NEG = /\b(?:not|n't|never|barely|hardly|wasn'?t|couldn'?t|didn'?t|no)\b[^.!?]{0,14}$/i;
+const SPLIT = /\b(?:and then|then|suddenly|all of a sudden|next thing|after that|later|the next moment|now i was|i was suddenly)\b/i;
+
+function clamp(x,a,b){return Math.max(a,Math.min(b,x))}
+function hashStr(s){let h=2166136261>>>0;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+function rngFrom(seed){let a=seed>>>0;return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+/* ---------- parse: text → cues ---------- */
+function findCues(text){
+  const cues=[];
+  for(const L of LEX){
+    L.re.lastIndex=0; let m;
+    while((m=L.re.exec(text))){
+      let v=L.v, effect=L.effect;
+      if(L.k==="clarity" && v==="high"){
+        const before=text.slice(Math.max(0,m.index-24),m.index);
+        if(NEG.test(before)){v="low";effect="more fog (negated)"}
+      }
+      if(L.k==="clarity" && v==="low" && /^\s+(?:his|her|their|its|my|anyone'?s|the) faces?\b/i.test(text.slice(m.index+m[0].length,m.index+m[0].length+16))) continue;   // a face the dreamer can't recall is a people cue, not scene fog
+      if(L.k==="clarity" && v==="low" && /^fog/i.test(m[0])){ /* literal fog is also a setting cue but treat as clarity */ }
+      cues.push({kind:L.k,value:v,phrase:m[0],effect,at:[m.index,m.index+m[0].length]});
+    }
+  }
+  for(const [w,hex] of Object.entries(COLOR_WORDS)){
+    const re=W(w); let m;
+    while((m=re.exec(text))) cues.push({kind:"style",value:"tint:"+hex,phrase:m[0],effect:w+" tint",at:[m.index,m.index+m[0].length]});
+  }
+  // drop overlaps: keep longest
+  cues.sort((a,b)=>a.at[0]-b.at[0]||(b.at[1]-b.at[0])-(a.at[1]-a.at[0]));
+  const out=[];let end=-1;
+  for(const c of cues){ if(c.at[0]>=end){out.push(c);end=c.at[1]} }
+  return out;
+}
+
+/* ---------- build spec ---------- */
+function buildSpec(text, mode, seed){
+  const t=text.trim();
+  const cues=findCues(t);
+  const has=(k,v)=>cues.some(c=>c.kind===k&&c.value===v);
+  const count=(k,v)=>cues.filter(c=>c.kind===k&&c.value===v).length;
+
+  // look
+  const hi=count("clarity","high"), lo=count("clarity","low");
+  let fog=0.55;
+  if(hi>lo) fog = hi>=2 ? 0.08 : 0.18;
+  else if(lo>hi) fog = clamp(0.62+0.08*(lo-hi),0,0.9);
+  let style="natural";
+  for(const s of ["mono","noir","sepia","vhs","vivid","pastel"]) if(has("style",s)) {style=s;break}
+  if(style==="mono" && has("style","noir")) style="noir";
+  const tintCue=cues.find(c=>c.kind==="style"&&c.value.startsWith("tint:"));
+  const tint = (tintCue && !["mono","noir","sepia"].includes(style)) ? tintCue.value.slice(5) : null;
+  let fps = hi>lo ? 12 : 8;
+  if(has("motion","slow")) fps=6;
+  if(has("motion","fast")) fps=Math.max(fps,14);
+  const grain = style==="vhs"?0.6 : style==="noir"?0.4 : hi>lo?0.22:0.38;
+  const echo = hi>lo?0.15 : has("motion","slow")?0.6 : 0.42;
+  const saturation = {natural:0.72,mono:0,noir:0,sepia:0,vhs:0.85,vivid:1.35,pastel:0.6}[style];
+
+  const lightOrder=["underwater","night","dusk","dawn","day"];
+  let globalLight=null; for(const l of lightOrder) if(has("light",l)){globalLight=l;break}
+
+  const mood=[...new Set(cues.filter(c=>c.kind==="mood").map(c=>c.value))];
+
+  // scenes: split into sentences, start a new scene at transition words
+  const sentRe=/[^.!?\n]+[.!?\n]*/g; let sm; const sents=[];
+  while((sm=sentRe.exec(t))){ if(sm[0].trim()) sents.push({s:sm[0],at:sm.index}) }
+  // further split sentences at transition words
+  const chunks=[];
+  for(const x of sents){
+    let s=x.s, base=x.at, m;
+    const re=/\b(?:and then|then|suddenly|all of a sudden|next thing|after that|the next moment)\b/gi;
+    let last=0;
+    while((m=re.exec(s))){ if(m.index>8){chunks.push({s:s.slice(last,m.index),at:base+last,trans:last>0||chunks.length>0&&false});last=m.index} }
+    chunks.push({s:s.slice(last),at:base+last});
+  }
+  const groups=[]; let cur=null;
+  for(const c of chunks){
+    const starts=SPLIT.test(c.s.slice(0,30));
+    if(!cur || (starts && cur.s.trim().length>12)){ cur={s:"",at:c.at,end:c.at}; groups.push(cur) }
+    cur.s+=c.s; cur.end=c.at+c.s.length;
+  }
+  // merge to max 4 scenes
+  while(groups.length>4){ const g=groups.pop(); groups[groups.length-1].s+=g.s; groups[groups.length-1].end=g.end }
+  if(!groups.length) groups.push({s:t,at:0,end:t.length});
+
+  let prevSetting="open", prevLight=globalLight;
+  const scenes=groups.map((g,i)=>{
+    const inScene=cues.filter(c=>c.at[0]>=g.at&&c.at[0]<g.end);
+    const els=new Set(); let setting=null, light=null, motion="drift";
+    for(const c of inScene){
+      if(c.kind==="setting"){ if(c.value[0]==="+") els.add(c.value.slice(1)); else if(!setting) setting=c.value }
+      if(c.kind==="light"&&!light) light=c.value;
+      if(c.kind==="motion"&&["falling","flying","chase","recede"].includes(c.value)&&motion==="drift") motion=c.value;
+    }
+    if(!setting){
+      if(els.has("house")) setting=(/\b(?:inside|in (?:my|the|her|his|our) (?:house|home))\b/i.test(g.s))?"room":"field";
+      else if(els.has("trees")) setting="forest";
+      else if(els.has("road")) setting="open";
+      else setting=i>0?prevSetting:"open";
+    }
+    if(setting==="room"&&els.has("house")) els.delete("house");
+    if(light==="underwater") setting="underwater";
+    light = light || (setting==="corridor"||setting==="room" ? "interior" : prevLight) || "overcast";
+    if(setting==="corridor"||setting==="room"){ if(!["interior"].includes(light) && light!=="night") light="interior" }
+    prevSetting=setting; prevLight = light==="interior"?prevLight:light;
+    return {text:g.s.trim(), setting, elements:[...els], light, motion, duration_s:6};
+  });
+  const dominantLight = scenes[0].light;
+
+  const title = makeTitle(scenes, t);
+  const spec={
+    version:1,
+    id:"d_"+(seed>>>0).toString(36),
+    created_at:new Date().toISOString(),
+    input:{mode,transcript:t},
+    title,
+    summary: t.length>140? t.slice(0,137).trim()+"…" : t,
+    look:{fog:+fog.toFixed(2),fps,grain:+grain.toFixed(2),echo:+echo.toFixed(2),vignette:0.55,style,saturation,tint,light:dominantLight},
+    mood,
+    scenes,
+    cues:cues.map(c=>({kind:c.kind,phrase:c.phrase,effect:c.effect,value:c.value,at:c.at})),
+    overrides:{},
+    read_by:"device",
+    seed:seed>>>0
+  };
+  const pp=findPeople(t, state.roster||[], !!state.self?.photo);
+  spec.people=pp.people; spec.dreamer=pp.dreamer; spec.cues=spec.cues.concat(pp.cues);
+  RANGES.set(spec, groups.map(g=>[g.at,g.end])); attachPeopleToScenes(spec, RANGES.get(spec));
+  spec.prompt=makePrompt(spec); spec.negative_prompt="cartoon, illustration, anime, crisp HDR, oversharpened, text, captions, watermark, logo, extra limbs, distorted faces, clean digital look";
+  return spec;
+}
+function makeTitle(scenes,t){
+  const s=scenes[0]; const nice={corridor:"The hallway",room:"The room",water:"By the water",city:"The city",forest:"The woods",field:"The field",mountains:"The hills",underwater:"Under the water",open:"Somewhere open"};
+  let base=nice[s.setting]||"A dream";
+  if(s.motion==="falling"||scenes.some(x=>x.motion==="falling")) base= base+", falling";
+  else if(scenes.some(x=>x.motion==="chase")) base= base+", followed";
+  else if(s.motion==="recede") base="The "+(s.setting==="corridor"?"hallway":"distance")+" that kept going";
+  return base;
+}
+function makePrompt(spec){
+  const L=spec.look;
+  const fogWord = L.fog<0.2?"faint atmospheric haze, clear and sharp" : L.fog<0.45?"soft haze, slightly diffused" : L.fog<0.7?"thick dreamlike fog, soft diffusion, details dissolving into mist":"dense fog, shapes barely visible, heavy diffusion";
+  const styleWord={natural:"muted natural colour",mono:"black and white photograph",noir:"high-contrast black and white film noir",sepia:"sepia-toned old photograph",vhs:"1990s home video camcorder footage, scanlines, colour bleed",vivid:"saturated technicolour",pastel:"soft pastel palette"}[L.style];
+  const scenes=spec.scenes.map(s=>`${s.text.replace(/\s+/g," ")} [${s.setting}${s.elements.length?"; "+s.elements.join(", "):""}; ${s.light} light${s.motion!=="drift"?"; "+s.motion:""}]`).join(" → ");
+  return `${scenes}.${peoplePrompt(spec)} Pseudo-realistic, photographic, 35mm, ${styleWord}${L.tint?", colour cast "+L.tint:""}, ${fogWord}, film grain, gentle vignette, low frame rate ${L.fps}fps, slight frame ghosting, dream logic${spec.mood.length?", mood: "+spec.mood.join(", "):""}.`;
+}
+
+/* =====================================================================
+   PEOPLE  — who was in the dream, and how their face came through
+   ---------------------------------------------------------------------
+   spec.people[]: {
+     id,                       // "self" | "p_<n>" (from your People list) | "k_<relation>" | "s_<n>" (stranger)
+     who,                      // how the dreamer said it: "my dad", "a woman", "Sarah"
+     ref,                      // People-list id when matched, else null
+     relation,                 // mother|father|sister|...|stranger|self
+     identity,                 // known_clear | known_different | known_unclear | obscured | stranger | self
+     identity_source,          // "said" (the dreamer described it) | "default"
+     face_clarity,             // 0..1, how sharply the face resolves through the fog
+     emotion,                  // neutral|joy|sad|fear|anger|surprise|null
+     minor,                    // true | false | null (unknown) — read by the content-rating stage
+     likeness,                 // "photo" (consented photo on file) | "generic"
+     photo_ref,                // "local:<id>" when likeness is photo; the image itself never goes in the spec
+     scenes: [i], mentions: [{phrase, at}]
+   }
+   spec.dreamer: { seen: bool, as_child: bool, emotion, photo_ref }   // reaction shots use this face
+   ===================================================================== */
+const REL = [
+  ["mother","mum|mom|mother|mommy|mummy|mam|mama"],["father","dad|father|daddy|papa"],
+  ["sister","sister|sis"],["brother","brother"],
+  ["grandmother","grandmother|grandma|gran|granny|nan|nana|nanna|grandmum"],["grandfather","grandfather|grandpa|grandad|granddad|gramps"],
+  ["partner","partner|wife|husband|girlfriend|boyfriend|fianc[eé]e?|spouse"],["ex","ex|ex-?(?:wife|husband|girlfriend|boyfriend|partner)"],
+  ["son","son"],["daughter","daughter"],["child","kids?|child|children|baby|toddler"],
+  ["friend","friend|best friend|mate|bestie"],["boss","boss|manager"],["teacher","teacher"],["colleague","colleague|co-?worker"],
+  ["aunt","aunt|auntie|aunty"],["uncle","uncle"],["cousin","cousin"],
+];
+const REL_LABEL={mother:"Mother",father:"Father",sister:"Sister",brother:"Brother",grandmother:"Grandmother",grandfather:"Grandfather",partner:"Partner",ex:"Ex",son:"Son",daughter:"Daughter",child:"Child",friend:"Friend",boss:"Boss",teacher:"Teacher",colleague:"Colleague",aunt:"Aunt",uncle:"Uncle",cousin:"Cousin",other:"Someone else"};
+const MINOR_REL=new Set(["child"]);
+const P_IDENTITY=[
+  ["known_unclear", "can'?t (?:remember|recall|picture) (?:his|her|their) face|couldn'?t (?:make out|see) (?:his|her|their) face (?:clearly|properly)|(?:don'?t|can'?t) (?:remember|recall) what (?:he|she|they) looked like|(?:his|her|their) face was (?:blurry|blurred|fuzzy|smudged|vague|a blur)", "face won't come into focus"],
+  ["obscured", "couldn'?t see (?:his|her|their) face|(?:his|her|their) face was (?:hidden|covered|in (?:the )?shadows?|dark|turned away)|(?:had|with) (?:his|her|their) backs? to me|faceless|had no face|without a face|in silhouette", "face hidden"],
+  ["known_different", "looked (?:completely |totally |really |so )?different|didn'?t look like (?:him|her|them|himself|herself|themselves|my \\w+)|(?:a|had a) different face|someone else'?s face|(?:wasn'?t|was not|didn'?t look) (?:really )?(?:him|her|them)|but (?:i|I) (?:just )?knew (?:it was|she was|he was|they were)|somehow (?:i )?knew (?:it was|she was|he was)|in (?:someone|somebody) else'?s body", "known, but a different face"],
+  ["known_clear", "saw (?:his|her|their) face (?:clearly|perfectly)|clear as day|exactly like (?:him|her|them)|(?:his|her|their) face was (?:so |really )?clear", "face seen clearly"],
+];
+const P_EMOTION=[
+  ["joy","smil(?:ing|ed|es)|laugh(?:ing|ed|s)|grinn(?:ing|ed)|happy|beaming"],["sad","cry(?:ing)?|cried|sobb(?:ing|ed)|in tears|sad|upset"],
+  ["anger","angry|furious|mad at me|yell(?:ing|ed)|shout(?:ing|ed)|scream(?:ing|ed) at"],["fear","scared|terrified|afraid|frightened|panick(?:ing|ed)"],
+  ["surprise","surprised|shocked|stunned"],["neutral","blank (?:face|stare|expression)|expressionless|stared|staring"],
+];
+const STRANGER_RE=/\b(?:(a|an|some|this|that|the|one)\s+(?:(?:old|older|young|younger|tall|short|strange|weird|faceless|dark|little|small|big|bald|blonde|thin)\s+)?(man|woman|guy|lady|stranger|person|figure|boy|girl|child|kid|baby|teenager|teen)|(someone|somebody))\b/gi;
+const MINOR_NOUN=new Set(["boy","girl","child","kid","baby","teenager","teen"]);
+const SELF_SEEN_RE=/\b(?:saw|see|seeing|watched|watching|looking at) myself\b|\bmy (?:reflection|double)\b|\banother (?:me|version of me)\b/gi;
+const SELF_CHILD_RE=/\bI was (?:a (?:little )?(?:kid|child|boy|girl|baby)|little|small|young again|(?:\d{1,2}|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen) (?:years? old|again))\b|\b(?:when|like when) I was (?:a (?:kid|child)|little|small|young)\b|\bas a (?:kid|child)\b|\bback in (?:primary|elementary|grade|middle) school\b/gi;
+const FACE_CLARITY={known_clear:.9,known_different:.75,known_unclear:.2,obscured:.08,stranger:.35,self:.85};
+
+function rosterMatchers(roster){
+  return roster.map(p=>{ const names=[p.name,...String(p.aliases||"").split(",")].map(s=>s.trim()).filter(Boolean);
+    return {p, re: names.length? new RegExp("\\b(?:"+names.map(n=>n.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("|")+")\\b","gi"):null} });
+}
+function personLikeness(p,rp,selfPhoto){
+  if(p.id==="self") return selfPhoto ? {likeness:"photo",photo_ref:"local:self"} : {likeness:"generic",photo_ref:null};
+  if(rp && rp.photo && rp.consent && !rp.minor) return {likeness:"photo",photo_ref:"local:"+rp.id};
+  return {likeness:"generic",photo_ref:null};
+}
+
+function findPeople(text, roster=[], selfPhoto=false){
+  const people=[], cues=[], mentions=[];   // mentions: {pid, at:[s,e]}
+  const byId=new Map();
+  const add=(id,base,at,phrase)=>{ let p=byId.get(id); if(!p){ p=Object.assign({id,mentions:[],scenes:[],identity:null,identity_source:"default",emotion:null},base); byId.set(id,p); people.push(p) }
+    p.mentions.push({phrase,at}); mentions.push({pid:id,at}); return p };
+  const taken=[]; const free=(a,b)=>!taken.some(([x,y])=>a<y&&b>x); const take=(a,b)=>taken.push([a,b]);
+  // 1. people from your list, by name or alias
+  for(const {p,re} of rosterMatchers(roster)){ if(!re) continue; let m; re.lastIndex=0;
+    while((m=re.exec(text))){ const at=[m.index,m.index+m[0].length]; if(!free(...at)) continue; take(...at);
+      add(p.id,{who:m[0],ref:p.id,relation:p.relation||"other",minor:p.minor?true:(MINOR_REL.has(p.relation)?null:false)},at,m[0]);
+      cues.push({kind:"people",value:p.id,phrase:m[0],effect:p.name+(p.photo&&p.consent&&!p.minor?" (photo)":""),at}) } }
+  // 2. "my dad", "our gran", "Mum"
+  for(const [rel,words] of REL){
+    const re=new RegExp("\\b(?:my|our)\\s+(?:(?:little|big|older|younger|old|late|best|dead|baby)\\s+)?(?:"+words+")(?:'s)?\\b","gi"); let m;
+    const reCap=new RegExp("\\b(?:"+words.split("|").filter(w=>/^[a-z]+$/.test(w)).map(w=>w[0].toUpperCase()+w.slice(1)).join("|")+")\\b","g");
+    for(const r of [re,reCap]){ r.lastIndex=0;
+      while((m=r.exec(text))){ const at=[m.index,m.index+m[0].replace(/'s$/,"").length]; if(!free(...at)) continue; take(...at);
+        const rp=roster.filter(p=>p.relation===rel); const hit=rp.length===1?rp[0]:null;
+        const id=hit?hit.id:"k_"+rel; const little=/\b(?:little|baby)\b/i.test(m[0]);
+        add(id,{who:m[0].replace(/'s$/,""),ref:hit?hit.id:null,relation:rel,minor:hit?(hit.minor?true:false):(MINOR_REL.has(rel)||little?true:(rel==="son"||rel==="daughter"?null:false))},at,m[0]);
+        cues.push({kind:"people",value:id,phrase:text.slice(...at),effect:hit?hit.name+(hit.photo&&hit.consent&&!hit.minor?" (photo)":""):(REL_LABEL[rel]||rel)+", known",at}) } } }
+  // 3. strangers: "a man", "the woman", "someone"
+  let m, n=0; const lastByNoun={}; STRANGER_RE.lastIndex=0;
+  while((m=STRANGER_RE.exec(text))){ const at=[m.index,m.index+m[0].length]; if(!free(...at)) continue;
+    if(/\b(?:I|we)\s+(?:was|were|am|'m|became|turned into)\s+(?:\w+\s+)?$/i.test(text.slice(Math.max(0,at[0]-30),at[0]))) continue;   // "I was a kid again" is the dreamer
+    take(...at);
+    const det=(m[1]||"").toLowerCase(), noun=(m[2]||m[3]).toLowerCase();
+    let id = (det==="the"||det==="this"||det==="that") && lastByNoun[noun] ? lastByNoun[noun] : null;
+    if(!id){ id="s_"+(++n); lastByNoun[noun]=id }
+    add(id,{who:m[0],ref:null,relation:"stranger",minor:MINOR_NOUN.has(noun)?true:false},at,m[0]);
+    cues.push({kind:"people",value:id,phrase:m[0],effect:MINOR_NOUN.has(noun)?"a child, stranger":"stranger",at}) }
+  // 4. the dreamer
+  const dreamer={seen:false,as_child:false,emotion:null,photo_ref:selfPhoto?"local:self":null};
+  SELF_SEEN_RE.lastIndex=0; while((m=SELF_SEEN_RE.exec(text))){ const at=[m.index,m.index+m[0].length]; dreamer.seen=true;
+    add("self",{who:"you",ref:"self",relation:"self",minor:false},at,m[0]); cues.push({kind:"people",value:"self",phrase:m[0],effect:"you, seen",at}) }
+  SELF_CHILD_RE.lastIndex=0; while((m=SELF_CHILD_RE.exec(text))){ dreamer.as_child=true; cues.push({kind:"people",value:"self",phrase:m[0],effect:"you, as a child (PG)",at:[m.index,m.index+m[0].length]}) }
+  if(dreamer.as_child && byId.has("self")) byId.get("self").minor=true;
+  mentions.sort((a,b)=>a.at[0]-b.at[0]);
+  const before=pos=>{ for(let i=mentions.length-1;i>=0;i--) if(mentions[i].at[0]<pos) return mentions[i].pid; return mentions[0]?.pid||null };
+  const sentenceOf=pos=>{ const s=text.lastIndexOf(".",pos-1), e=text.slice(pos).search(/[.!?\n]/); return [s+1, e<0?text.length:pos+e] };
+  // 5. how the face came through: attach to the most recent person mentioned before the phrase
+  for(const [state_,src,effect] of P_IDENTITY){ const re=new RegExp("\\b(?:"+src+")\\b","gi"); re.lastIndex=0;
+    while((m=re.exec(text))){ const at=[m.index,m.index+m[0].length]; if(!free(...at)) continue; take(...at);
+      const pid=before(at[0]); if(!pid) continue; const p=byId.get(pid);
+      if(p.identity_source!=="said"){ p.identity = (p.relation==="stranger" && state_==="known_different") ? "stranger" : state_; p.identity_source="said" }
+      cues.push({kind:"people",value:pid,phrase:m[0],effect:p.who+": "+effect,at}) } }
+  // 6. expressions: a person in the same sentence, else it is the dreamer's own feeling
+  for(const [emo,src] of P_EMOTION){ const re=new RegExp("\\b(?:"+src+")\\b","gi"); re.lastIndex=0;
+    while((m=re.exec(text))){ const at=[m.index,m.index+m[0].length]; const [s,e]=sentenceOf(at[0]);
+      const near=mentions.filter(x=>x.pid!=="self"&&x.at[0]>=s&&x.at[0]<e).sort((a,b)=>Math.abs(a.at[0]-at[0])-Math.abs(b.at[0]-at[0]))[0];
+      const iSubj=/\bI\b[^.!?]{0,12}$/.test(text.slice(s,at[0]));
+      const pron=!near && !iSubj && /\b(?:he|she|they|him|her|them)\b/i.test(text.slice(s,e)) ? before(at[0]) : null;
+      const pid=near?near.pid:pron;
+      if(pid && pid!=="self" && !iSubj){ const p=byId.get(pid); if(!p.emotion) p.emotion=emo }
+      else if(!dreamer.emotion) dreamer.emotion=emo } }
+  for(const p of people){
+    if(!p.identity) p.identity = p.id==="self"?"self" : p.relation==="stranger"?"stranger":"known_clear";
+    p.face_clarity=FACE_CLARITY[p.identity];
+    Object.assign(p,personLikeness(p,roster.find(r=>r.id===p.ref),selfPhoto));
+  }
+  return {people,cues,dreamer};
+}
+function attachPeopleToScenes(spec,ranges){
+  for(const sc of spec.scenes) sc.people=[];
+  for(const p of spec.people){ p.scenes=[];
+    ranges.forEach(([a,b],i)=>{ if(p.mentions.some(mm=>mm.at[0]>=a&&mm.at[0]<b)){ p.scenes.push(i); spec.scenes[i].people.push(p.id) } });
+    if(!p.scenes.length && spec.scenes.length){ p.scenes=[0]; spec.scenes[0].people.push(p.id) } }
+  for(const sc of spec.scenes) if(sc.people.some(id=>id!=="self"||spec.dreamer?.seen) && !sc.elements.includes("figure")) sc.elements.push("figure");
+}
+function peoplePrompt(spec){
+  const D={known_clear:"face clearly seen",known_different:"recognisably them by hair, build and clothes, but with a different face",known_unclear:"face soft and unresolved, features dissolving",obscured:"face hidden in shadow",stranger:"a stranger whose face never quite resolves",self:"the dreamer seen from outside"};
+  const bits=(spec.people||[]).map(p=>`${p.who.replace(/^(my|our) /i,"the dreamer's ")} (${D[p.identity]}${p.emotion&&p.emotion!=="neutral"?", "+{joy:"smiling",sad:"tearful",fear:"frightened",anger:"angry",surprise:"surprised"}[p.emotion]:""}${p.likeness==="photo"?", likeness from reference photo "+p.photo_ref:""})`);
+  return bits.length?" People: "+bits.join("; ")+".":"";
+}
+const RANGES=new WeakMap();   // spec -> [[start,end]] transcript span of each scene
+function rangesFromScenes(spec){
+  const t=spec.input.transcript, n=spec.scenes.length; let prev=0;
+  const st=spec.scenes.map((sc,i)=>{ const k=t.indexOf(String(sc.text||"").slice(0,24),prev); const v=k>=0?k:Math.round(i*t.length/n); prev=Math.max(prev,v); return v });
+  return st.map((a,i)=>[i?a:0, i<n-1?st[i+1]:t.length]);
+}
+function relinkPeople(spec){
+  const pp=findPeople(spec.input.transcript, state.roster, !!state.self.photo);
+  const keep=new Map((spec.people||[]).filter(p=>p.identity_source==="said"||p.emotion).map(p=>[p.id,p]));
+  spec.people=pp.people.map(p=>{ const k=keep.get(p.id); return k&&p.identity_source!=="said"?Object.assign(p,{identity:k.identity,identity_source:k.identity_source,face_clarity:k.face_clarity,emotion:p.emotion||k.emotion}):p });
+  spec.dreamer=pp.dreamer;
+  spec.cues=spec.cues.filter(c=>c.kind!=="people").concat(pp.cues);
+  attachPeopleToScenes(spec, RANGES.get(spec)||rangesFromScenes(spec));
+  spec.prompt=makePrompt(spec);
+  return spec;
+}
+
+/* =====================================================================
+   RENDERER SEAM
+   interface DreamRenderer {
+     id: string; label: string;
+     render(spec, {onProgress, signal}): Promise<RenderResult>
+   }
+   RenderResult = { kind:"video", src } | { kind:"image", src } | { kind:"live", start(canvas), stop(), update(spec) }
+   Swap PLACEHOLDER for a pipeline client (POST spec → poll → {kind:"video",src}).
+   ===================================================================== */
+const sleep=(ms,signal)=>new Promise((res,rej)=>{const t=setTimeout(res,ms);signal?.addEventListener("abort",()=>{clearTimeout(t);rej(new Error("aborted"))})});
+const PipelineRenderer = {
+  id:"pipeline", label:"Render pipeline",
+  // 1) Pre-rendered clips published beside this page (the artifact sandbox only loads its own files):
+  //    renders/index.json = { "<spec.id>" | "t_<transcript hash>": { "src":"renders/<id>/clip.mp4", "poster":"renders/<id>/poster.jpg" } }
+  manifest:"renders/index.json",
+  // 2) Async job API, for when the page runs somewhere that can reach it:
+  //    POST {endpoint}/jobs (spec JSON) -> {job_id};  GET {endpoint}/jobs/{id} -> {status:"queued"|"running"|"done"|"failed", progress?:0..1, eta_s?, result?:{src,poster}, error?}
+  endpoint:null,
+  async lookup(spec){
+    try{ const r=await fetch(this.manifest,{cache:"no-store"}); if(!r.ok) return null; const m=await r.json();
+      const hit=m[spec.id]||m["t_"+hashStr(spec.input.transcript).toString(36)]; return hit&&hit.src?{kind:"video",src:hit.src,poster:hit.poster||null}:null }catch(_){ return null }
+  },
+  async render(spec,{onProgress,signal}={}){
+    const pre=await this.lookup(spec); if(pre) return pre;
+    if(!this.endpoint) throw new Error("not_configured");
+    const base=this.endpoint.replace(/\/$/,"");
+    const eff=Object.assign({},spec,{look:Object.assign({},spec.look,spec.overrides)});
+    const r=await fetch(base+"/jobs",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(eff),signal});
+    if(!r.ok) throw new Error("pipeline_"+r.status);
+    const {job_id}=await r.json();
+    for(;;){
+      await sleep(5000,signal);
+      const q=await fetch(base+"/jobs/"+encodeURIComponent(job_id),{signal}); if(!q.ok) throw new Error("pipeline_"+q.status);
+      const st=await q.json(); onProgress?.(st);
+      if(st.status==="done") return {kind:"video",src:new URL(st.result.src,base+"/").href,poster:st.result.poster?new URL(st.result.poster,base+"/").href:null};
+      if(st.status==="failed") throw new Error(st.error||"render_failed");
+    }
+  }
+};
+
+/* ---------- placeholder renderer: procedural, in-browser ---------- */
+const RW=384, RH=288;
+const PAL={
+  night:{top:"#070b20",bot:"#2a3560",ground:"#10152a",fog:"#4f5a80",sil:"#05070f",win:"#f1c97a"},
+  dusk:{top:"#2a2347",bot:"#d48a6a",ground:"#2c2232",fog:"#b99b9b",sil:"#1a1420",win:"#ffd28a"},
+  dawn:{top:"#3d4c72",bot:"#e9c6aa",ground:"#4a4a5a",fog:"#cfc4c6",sil:"#2a2834",win:"#ffe0b0"},
+  day:{top:"#87a1bf",bot:"#e2e6e8",ground:"#7a8770",fog:"#dfe2e6",sil:"#3a4038",win:"#fff2c8"},
+  overcast:{top:"#76818f",bot:"#c8ccd0",ground:"#5c645e",fog:"#c1c6cb",sil:"#2d322f",win:"#f6e6b8"},
+  underwater:{top:"#04202c",bot:"#1f6170",ground:"#0a2a33",fog:"#2f7380",sil:"#03141b",win:"#bff2ff"},
+  interior:{top:"#2b2521",bot:"#4b4038",ground:"#231d19",fog:"#8a7b68",sil:"#120e0b",win:"#ffd9a0"},
+};
+function hexToRgb(h){if(h.startsWith("rgb"))return h.match(/[\d.]+/g).slice(0,3).map(Number);h=h.replace("#","");return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]}
+function mix(a,b,t){const A=hexToRgb(a),B=hexToRgb(b);return`rgb(${A.map((v,i)=>Math.round(v+(B[i]-v)*t)).join(",")})`}
+function mkCanvas(w,h){const c=document.createElement("canvas");c.width=w;c.height=h;return c}
+
+// value-noise fog textures (generated once)
+function makeNoiseTex(w,h,seed,scale){
+  const r=rngFrom(seed); const gw=Math.ceil(w/scale)+2, gh=Math.ceil(h/scale)+2; const g=new Float32Array(gw*gh).map(()=>r());
+  const c=mkCanvas(w,h), x=c.getContext("2d"), img=x.createImageData(w,h);
+  const sm=t=>t*t*(3-2*t);
+  for(let y=0;y<h;y++)for(let X=0;X<w;X++){
+    let v=0,amp=1,tot=0,f=1;
+    for(let o=0;o<3;o++){
+      const fx=X/scale*f, fy=y/scale*f; const ix=Math.floor(fx)%(gw-1), iy=Math.floor(fy)%(gh-1); const tx=sm(fx-Math.floor(fx)), ty=sm(fy-Math.floor(fy));
+      const a=g[iy*gw+ix],b=g[iy*gw+ix+1],cc=g[(iy+1)*gw+ix],d=g[(iy+1)*gw+ix+1];
+      v+=amp*((a*(1-tx)+b*tx)*(1-ty)+(cc*(1-tx)+d*tx)*ty); tot+=amp; amp*=.5; f*=2;
+    }
+    v/=tot; const i=(y*w+X)*4; img.data[i]=img.data[i+1]=img.data[i+2]=255; img.data[i+3]=Math.round(clamp((v-.25)*1.7,0,1)*255);
+  }
+  x.putImageData(img,0,0); return c;
+}
+function makeGrainTex(w,h,seed){const r=rngFrom(seed),c=mkCanvas(w,h),x=c.getContext("2d"),img=x.createImageData(w,h);for(let i=0;i<img.data.length;i+=4){const v=Math.round(r()*255);img.data[i]=img.data[i+1]=img.data[i+2]=v;img.data[i+3]=255}x.putImageData(img,0,0);return c}
+let FOGTEX=null, GRAIN=null;
+function ensureTextures(){ if(FOGTEX) return; FOGTEX=[makeNoiseTex(192,144,7,24),makeNoiseTex(192,144,91,14)]; GRAIN=[0,1,2,3].map(i=>makeGrainTex(RW,RH,100+i)); }
+const tintCache=new Map();
+function fogTex(i,color){const k=i+color;if(tintCache.has(k))return tintCache.get(k);const s=FOGTEX[i],c=mkCanvas(s.width,s.height),x=c.getContext("2d");x.fillStyle=color;x.fillRect(0,0,c.width,c.height);x.globalCompositeOperation="destination-in";x.drawImage(s,0,0);tintCache.set(k,c);return c}
+
+function layoutScene(scene,seed){
+  const r=rngFrom(seed); const L={r, horizon: scene.setting==="mountains"?0.62:0.6};
+  L.trees=Array.from({length:scene.setting==="forest"?14:(scene.elements.includes("trees")?5:0)},()=>({x:r(),d:r(),h:.5+r()*.5,w:.6+r()*.6}));
+  L.trees.sort((a,b)=>a.d-b.d);
+  L.city=Array.from({length:22},()=>({x:r(),w:.03+r()*.05,h:.08+r()*.3,lit:r()}));
+  L.cityNear=Array.from({length:9},()=>({x:r(),w:.07+r()*.09,h:.25+r()*.45}));
+  L.ridges=[0,1].map(()=>Array.from({length:9},()=>r()));
+  L.figures=scene.elements.includes("figure")?[{x:.35+r()*.3,d:.35+r()*.35}]:[];
+  L.crowd=scene.elements.includes("crowd")?Array.from({length:16},()=>({x:.15+r()*.7,d:r()*.3})):[];
+  L.birds=scene.elements.includes("birds")?Array.from({length:7},()=>({x:r(),y:.12+r()*.25,s:.6+r()*.6,p:r()*6})):[];
+  L.stars=Array.from({length:70},()=>({x:r(),y:r()*.55,s:r()}));
+  L.drops=Array.from({length:120},()=>({x:r(),y:r(),s:.5+r()}));
+  L.grass=Array.from({length:90},()=>({x:r(),h:.03+r()*.07,p:r()*6}));
+  L.moonBig=/huge|giant|enormous|massive|big moon|so big/i.test(scene.text);
+  L.houseX=.25+r()*.5; L.doorX=.5;
+  if(L.figures.length && (scene.people||[]).length>1) L.figures.push({x:L.figures[0].x>.5?.18+r()*.12:.7+r()*.12,d:.3+r()*.3});
+  return L;
+}
+
+const Placeholder = {
+  id:"placeholder", label:"Placeholder preview (in-browser)",
+  async render(spec){
+    ensureTextures();
+    let running=false, raf=0, cv=null, ctx=null, last=-1, startT=performance.now(), offsetT=0, paused=false;
+    let S=spec; let layouts=S.scenes.map((s,i)=>layoutScene(s,S.seed+i*977));
+    const bufA=mkCanvas(RW,RH), bufB=mkCanvas(RW,RH), out=mkCanvas(RW,RH);
+    let frame=0, forcedScene=null;
+    const api={
+      kind:"live",
+      start(canvas){cv=canvas;ctx=cv.getContext("2d");running=true;applyCss();loop()},
+      stop(){running=false;cancelAnimationFrame(raf)},
+      update(ns){const reseed=ns.seed!==S.seed||ns.scenes.length!==S.scenes.length||ns.scenes.some((s,i)=>JSON.stringify(s)!==JSON.stringify(S.scenes[i]));S=ns;if(reseed)layouts=S.scenes.map((s,i)=>layoutScene(s,S.seed+i*977));applyCss()},
+      setPaused(p){if(p){paused=true;offsetT=time()}else{paused=false;startT=performance.now()-offsetT*1000}},
+      jump(i){const per=sceneDur();startT=performance.now()-(i*per+0.01)*1000;offsetT=i*per;forcedScene=null;if(paused){offsetT=i*per+0.2;draw(offsetT)}},
+      snapshot(){return out.toDataURL("image/jpeg",.8)},
+      cssFilter(){return cssFor(look())},
+      onScene:null,
+    };
+    function look(){return Object.assign({},S.look,S.overrides||{})}
+    function sceneDur(){return S.scenes[0]?.duration_s||6}
+    function time(){return paused?offsetT:(performance.now()-startT)/1000}
+    function applyCss(){ if(cv) cv.style.filter=cssFor(look()) }
+    function loop(){
+      if(!running) return;
+      raf=requestAnimationFrame(loop);
+      const L=look(); const t=time(); const step=Math.floor(t*L.fps);
+      if(step===last) return; last=step;
+      draw(step/L.fps);
+    }
+    function draw(t){
+      const L=look(); frame++;
+      const per=sceneDur(), n=S.scenes.length, total=per*n;
+      const tt=((t%total)+total)%total; const si=Math.floor(tt/per); const local=tt-si*per;
+      const fade=1.2; const nextI=(si+1)%n;
+      renderScene(bufA.getContext("2d"),S.scenes[si],layouts[si],t,L,local);
+      const o=out.getContext("2d");
+      o.globalCompositeOperation="source-over";
+      o.globalAlpha=1-L.echo*0.85; o.drawImage(bufA,0,0);
+      if(n>1 && local>per-fade){
+        renderScene(bufB.getContext("2d"),S.scenes[nextI],layouts[nextI],t,L,0);
+        o.globalAlpha=(local-(per-fade))/fade*(1-L.echo*0.5); o.drawImage(bufB,0,0);
+      }
+      o.globalAlpha=1;
+      post(o,L,t);
+      ctx.clearRect(0,0,RW,RH); ctx.drawImage(out,0,0);
+      if(api.onScene) api.onScene(si);
+    }
+    return api;
+  }
+};
+
+function cssFor(L){
+  const f=[];
+  const blur=(L.fog*1.1).toFixed(2);
+  if(L.style==="mono") f.push("grayscale(1)","contrast(1.08)");
+  else if(L.style==="noir") f.push("grayscale(1)","contrast(1.3)","brightness(1.08)");
+  else if(L.style==="sepia") f.push("sepia(.85)","contrast(.95)");
+  else f.push(`saturate(${L.saturation??0.72})`);
+  if(L.style==="pastel") f.push("brightness(1.08)","contrast(.88)");
+  f.push(`blur(${blur}px)`);
+  return f.join(" ");
+}
+
+function renderScene(x,scene,Ly,t,L,local){
+  const P0=PAL[scene.light]||PAL.overcast; const tone=scene.fog_tone??L.fog_tone??.5; const P=Object.assign({},P0,{fog: tone<.5? mix(P0.fog,"#ecebe6",(.5-tone)*2) : mix(P0.fog,"#09090b",(tone-.5)*2)}); const fog=L.fog; const H=RH, Wd=RW;
+  const cam={x:Math.sin(t*.11)*10, y:Math.sin(t*.07)*4, z:1+.035*Math.sin(t*.05)};
+  let shakeX=0, shakeY=0, fallY=0, flyY=0;
+  if(scene.motion==="chase"){shakeX=(Math.sin(t*23)+Math.sin(t*17))*2.2;shakeY=Math.abs(Math.sin(t*9))*-3}
+  if(scene.motion==="falling") fallY=(t*60)%H;
+  if(scene.motion==="flying") flyY=Math.sin(t*.4)*18+20;
+  x.save(); x.globalAlpha=1; x.globalCompositeOperation="source-over";
+  x.setTransform(cam.z,0,0,cam.z,(Wd-Wd*cam.z)/2+shakeX,(H-H*cam.z)/2+shakeY);
+  const hz=H*Ly.horizon+flyY;
+  const depthFog=(d)=>clamp(fog*(1.05-d)*1.1,0,.95); // d: 0 far, 1 near
+  const ink=(d)=>mix(P.sil,P.fog,depthFog(d)*.9+ (1-d)*.15);
+
+  if(scene.setting==="corridor"||scene.setting==="room"){ drawInterior(x,scene,Ly,t,P,fog,local); }
+  else {
+    // sky
+    const g=x.createLinearGradient(0,0,0,hz); g.addColorStop(0,P.top); g.addColorStop(1,P.bot); x.fillStyle=g; x.fillRect(-20,-40,Wd+40,hz+40);
+    if(scene.light==="night"||scene.elements.includes("stars")) for(const s of Ly.stars){ x.globalAlpha=(.3+.7*Math.abs(Math.sin(t*.8+s.s*9)))*(1-fog*.9)*(scene.light==="night"?1:.4); x.fillStyle="#fff"; x.fillRect(s.x*Wd+cam.x*.1,s.y*hz,1,1)}
+    x.globalAlpha=1;
+    // celestial
+    const moon=scene.elements.includes("moon");
+    const lowSun=!moon&&(scene.light==="dusk"||scene.light==="dawn")&&scene.setting!=="city";
+    if(moon||scene.elements.includes("sun")||lowSun){
+      const isSun=!moon; const R=(Ly.moonBig?44:18)*(isSun?1.2:1); const cx=Wd*.68+cam.x*.15, cy=hz*(isSun&&(scene.light==="dusk"||scene.light==="dawn")?.9:.38);
+      const gl=x.createRadialGradient(cx,cy,R*.4,cx,cy,R*4); gl.addColorStop(0,isSun?"rgba(255,210,150,.55)":"rgba(230,235,255,.45)"); gl.addColorStop(1,"rgba(255,255,255,0)");
+      x.fillStyle=gl; x.fillRect(cx-R*4,cy-R*4,R*8,R*8);
+      x.fillStyle=isSun?"#fff1d0":"#eef0f6"; x.globalAlpha=1-fog*.55; x.beginPath(); x.arc(cx,cy,R,0,7); x.fill(); x.globalAlpha=1;
+    }
+    // mountains / ridges
+    if(scene.setting==="mountains"||scene.setting==="open"||scene.setting==="field"||scene.setting==="water"){
+      Ly.ridges.forEach((rd,ri)=>{
+        const d=ri*.25; x.globalAlpha=1; x.fillStyle=mix(P.sil,P.fog,clamp(depthFog(d)+(1-ri)*.3,0,1));
+        x.beginPath(); x.moveTo(-20,hz+2);
+        const amp=scene.setting==="mountains"?(ri?55:90):(ri?14:22);
+        rd.forEach((v,i)=>{ x.lineTo(-20+(Wd+40)*i/(rd.length-1)+cam.x*(.2+d), hz - amp*(.35+v*.65)*(ri?0.8:1)) });
+        x.lineTo(Wd+20,hz+2); x.closePath(); x.fill();
+      });
+    }
+    // city far
+    if(scene.setting==="city"){
+      for(const b of Ly.city){ const bx=b.x*Wd+cam.x*.3, bw=b.w*Wd, bh=b.h*H; x.fillStyle=mix(P.sil,P.fog,depthFog(.2)+.1); x.fillRect(bx,hz-bh,bw,bh);
+        if(scene.light!=="day") { x.fillStyle=P.win; for(let wy=hz-bh+4;wy<hz-3;wy+=6) for(let wx=bx+2;wx<bx+bw-2;wx+=5){ if(((wx*13+wy*7+b.lit*99)|0)%5===0){x.globalAlpha=(1-fog*.8)*.8;x.fillRect(wx,wy,2,2);x.globalAlpha=1}} } }
+    }
+    // ground / water
+    if(scene.setting==="water"||scene.setting==="underwater"){
+      const wg=x.createLinearGradient(0,hz,0,H); wg.addColorStop(0,mix(P.bot,P.fog,.2)); wg.addColorStop(1,P.ground); x.fillStyle=wg; x.fillRect(-20,hz,Wd+40,H-hz+40);
+      x.strokeStyle=scene.light==="night"?"rgba(220,228,255,.35)":"rgba(255,255,255,.25)"; x.lineWidth=1;
+      for(let i=0;i<46;i++){ const yy=hz+Math.pow(i/46,1.6)*(H-hz); const len=6+i*1.3; const xx=(Wd*.68 + Math.sin(t*1.3+i*1.7)*(10+i*2.2)) + cam.x*(i/46); x.globalAlpha=(1-fog*.7)*(.25+.5*(1-i/46)); x.beginPath(); x.moveTo(xx-len,yy); x.lineTo(xx+len,yy); x.stroke(); }
+      x.globalAlpha=1;
+      if(scene.setting==="underwater"){ for(let i=0;i<7;i++){ const rx=(i*61+t*8)%Wd; const gr=x.createLinearGradient(rx,0,rx+30,H); gr.addColorStop(0,"rgba(190,240,255,.18)"); gr.addColorStop(1,"rgba(190,240,255,0)"); x.fillStyle=gr; x.beginPath(); x.moveTo(rx,0); x.lineTo(rx+14,0); x.lineTo(rx+60,H); x.lineTo(rx+30,H); x.fill(); } }
+    } else {
+      const gg=x.createLinearGradient(0,hz,0,H); gg.addColorStop(0,mix(P.ground,P.fog,fog*.7)); gg.addColorStop(1,P.ground); x.fillStyle=gg; x.fillRect(-20,hz,Wd+40,H-hz+40);
+    }
+    // road
+    if(scene.elements.includes("road")||scene.setting==="city"){
+      x.fillStyle=mix(P.sil,P.ground,.5); x.beginPath(); x.moveTo(Wd*.47+cam.x*.4,hz); x.lineTo(Wd*.53+cam.x*.4,hz); x.lineTo(Wd*.95,H+10); x.lineTo(Wd*.05,H+10); x.fill();
+      x.strokeStyle="rgba(230,220,180,.35)"; x.setLineDash([6,10]); x.lineDashOffset=-t*30; x.beginPath(); x.moveTo(Wd*.5+cam.x*.4,hz); x.lineTo(Wd*.5,H); x.stroke(); x.setLineDash([]);
+    }
+    // street lamps
+    if(scene.setting==="city"&&scene.light!=="day"){ for(let i=0;i<5;i++){ const f=Math.pow((i+1)/6,1.5); const lx=Wd*(.5-(.47-.03)*f*1.0)+cam.x*.4, rx=Wd*(.5+(.44)*f)+cam.x*.4, ly=hz+(H-hz)*f*.9;
+        for(const X of [lx,rx]){ const ph=ly-50*f-6; x.fillStyle=hexA(P.sil,.8); x.fillRect(X-.6,ph,1.4*(.5+f),ly-ph); const gl=x.createRadialGradient(X,ph,1,X,ph,40*f+10); gl.addColorStop(0,"rgba(255,226,170,.75)"); gl.addColorStop(1,"rgba(255,226,170,0)"); x.fillStyle=gl; x.fillRect(X-60,ph-60,120,120);
+          const pool=x.createRadialGradient(X,ly,1,X,ly,46*f+8); pool.addColorStop(0,"rgba(255,226,170,.22)"); pool.addColorStop(1,"rgba(255,226,170,0)"); x.fillStyle=pool; x.fillRect(X-60,ly-30,120,60) } } }
+    // near city
+    if(scene.setting==="city"){
+      for(const b of Ly.cityNear){ const side=b.x<.5?-1:1; const bx=(b.x<.5? b.x*.32 : .68+(b.x-.5)*.6)*Wd + cam.x*.8; x.fillStyle=ink(.8); x.fillRect(bx,H*.95-b.h*H*1.4,b.w*Wd,b.h*H*1.6); }
+    }
+    // house
+    if(scene.elements.includes("house")){
+      const hx=Ly.houseX*Wd+cam.x*.5, hy=hz+6, hw=58, hh=38; x.fillStyle=ink(.45); x.fillRect(hx-hw/2,hy-hh,hw,hh);
+      x.beginPath(); x.moveTo(hx-hw/2-6,hy-hh); x.lineTo(hx,hy-hh-26); x.lineTo(hx+hw/2+6,hy-hh); x.fill();
+      x.fillStyle=P.win; x.globalAlpha=.85-fog*.3; x.fillRect(hx-14,hy-hh+12,8,9); x.fillRect(hx+6,hy-hh+12,8,9); x.globalAlpha=1;
+    }
+    // trees
+    for(const tr of Ly.trees){ const d=tr.d; const s=.35+d*1.1; const tx=tr.x*(Wd+80)-40+cam.x*(.3+d); const by=hz+ (H-hz)*d*.8+4; const th=70*tr.h*s; x.fillStyle=ink(d);
+      x.fillRect(tx-2*s,by-th,4*s,th); for(let k=0;k<4;k++){x.beginPath();x.ellipse(tx+Math.sin(k*2.1)*9*s*tr.w,by-th+(k*7-6)*s+Math.sin(t*.6+k+tr.x*9)*.8,(15-k*1.6)*s*tr.w,(13-k)*s,0,0,7);x.fill()} }
+    // grass
+    if(scene.setting==="field"){ x.strokeStyle=ink(.9); x.lineWidth=1; for(const gs of Ly.grass){ const gx=gs.x*Wd+cam.x; const gy=H+2; x.beginPath(); x.moveTo(gx,gy); x.quadraticCurveTo(gx+Math.sin(t*1.2+gs.p)*4,gy-gs.h*H*.6,gx+Math.sin(t*1.2+gs.p)*7,gy-gs.h*H*1.6); x.stroke() } }
+    // door standing in landscape
+    if(scene.elements.includes("door")){ const dx=Wd*.5+cam.x*.6, dy=hz+22; drawDoor(x,dx,dy,22,44,P,fog,t,ink(.55)) }
+    // stairs
+    if(scene.elements.includes("stairs")) drawStairs(x,Wd*.5+cam.x*.6,H,hz-30,P,fog,ink);
+  }
+  // figures
+  for(const [k,f] of Ly.figures.entries()){
+    let d=f.d, fx=f.x*Wd+cam.x*(.4+d);
+    if(scene.motion==="chase"){ d=.25+.2*(Math.sin(t*.5)*.5+.5); fx=Wd*.5+Math.sin(t*.3)*30 }
+    if(scene.motion==="recede"){ d=clamp(.6-(local/6)*.45,.1,.6) }
+    const fy = (scene.setting==="corridor"||scene.setting==="room") ? H*.55+ (H*.45)*d*.7 : hz+(H-hz)*d*.7;
+    const face=faceForScene(scene,k);
+    drawFigure(x,fx,fy,face?.img?Math.max(26+d*90,74):(26+d*90),ink(d),t,f.x,face);
+  }
+  for(const c of Ly.crowd){ drawFigure(x,c.x*Wd+cam.x*.4,hz+(H-hz)*c.d*.4+4,16+c.d*22,ink(c.d),t,c.x) }
+  // birds
+  x.strokeStyle=ink(.5); x.lineWidth=1.2;
+  for(const b of Ly.birds){ const bx=((b.x*Wd+t*14*b.s)%(Wd+40))-20, by=b.y*H+Math.sin(t*2+b.p)*3, w=5*b.s, fl=Math.sin(t*7+b.p)*2.5; x.beginPath(); x.moveTo(bx-w,by-fl); x.lineTo(bx,by); x.lineTo(bx+w,by-fl); x.stroke() }
+  // falling streaks
+  if(scene.motion==="falling"){ x.strokeStyle="rgba(255,255,255,.18)"; for(let i=0;i<26;i++){ const sx=(i*53.3)%Wd, sy=((i*97)+t*240)%(H+80)-40; x.beginPath(); x.moveTo(sx,H-sy); x.lineTo(sx,H-sy-30); x.stroke() } }
+  // weather
+  if(scene.elements.includes("rain")){ x.strokeStyle="rgba(210,220,235,.32)"; x.lineWidth=1; for(const dr of Ly.drops){ const y=((dr.y*H+t*260*dr.s)%(H+20))-10, xx=dr.x*Wd-y*.12; x.beginPath(); x.moveTo(xx,y); x.lineTo(xx-2,y+8*dr.s); x.stroke() } }
+  if(scene.elements.includes("snow")){ x.fillStyle="rgba(255,255,255,.75)"; for(const dr of Ly.drops){ const y=((dr.y*H+t*22*dr.s)%(H+10))-5, xx=dr.x*Wd+Math.sin(t+dr.x*20)*6; x.fillRect(xx,y,1.6*dr.s,1.6*dr.s) } }
+  if(scene.elements.includes("glow")&&!scene.elements.includes("door")){ const gx=Wd*.5+cam.x*.4, gy=hz-10; const gl=x.createRadialGradient(gx,gy,2,gx,gy,90); gl.addColorStop(0,"rgba(255,236,200,.5)"); gl.addColorStop(1,"rgba(255,236,200,0)"); x.fillStyle=gl; x.fillRect(gx-90,gy-90,180,180) }
+
+  // fog layers
+  x.setTransform(1,0,0,1,0,0);
+  x.globalAlpha=fog*.26; x.fillStyle=P.fog; x.fillRect(0,0,Wd,H);
+  for(let i=0;i<2;i++){
+    const tex=fogTex(i,P.fog); const sp=i?9:4; const ox=-((t*sp+i*80)%(tex.width*2)); const sc=2+i*.6;
+    x.globalAlpha=clamp(fog*(i?0.5:0.75),0,1);
+    for(let k=0;k<3;k++) x.drawImage(tex,ox+k*tex.width*sc,(i?-10:20)+Math.sin(t*.2+i)*6,tex.width*sc,tex.height*sc);
+  }
+  // low ground mist
+  const mg=x.createLinearGradient(0,hz-30,0,H); mg.addColorStop(0,"rgba(0,0,0,0)"); mg.addColorStop(.35,hexA(P.fog,fog*.55)); mg.addColorStop(1,hexA(P.fog,fog*.2)); x.globalAlpha=1; x.fillStyle=mg; x.fillRect(0,hz-30,Wd,H-hz+30);
+  x.restore();
+}
+function hexA(h,a){const [r,g,b]=hexToRgb(h);return`rgba(${r},${g},${b},${clamp(a,0,1)})`}
+function drawDoor(x,cx,by,w,h,P,fog,t,frame){
+  const gl=x.createRadialGradient(cx,by-h/2,4,cx,by-h/2,h*1.6); gl.addColorStop(0,"rgba(255,230,180,.55)"); gl.addColorStop(1,"rgba(255,230,180,0)"); x.fillStyle=gl; x.fillRect(cx-h*1.6,by-h*2.1,h*3.2,h*3.2);
+  x.fillStyle=frame; x.fillRect(cx-w/2-3,by-h-3,w+6,h+3);
+  x.fillStyle=P.win; x.globalAlpha=.9; x.fillRect(cx-w/2,by-h,w,h); x.globalAlpha=1;
+}
+function drawStairs(x,cx,baseY,topY,P,fog,ink){
+  const n=10; for(let i=0;i<n;i++){ const t0=i/n, t1=(i+1)/n; const y0=baseY-(baseY-topY)*t0, y1=baseY-(baseY-topY)*t1; const w0=150*(1-t0*.8), w1=150*(1-t1*.8);
+    x.fillStyle=ink(1-t0*.9); x.fillRect(cx-w0/2,y1,w0,y0-y1); x.fillStyle="rgba(255,255,255,.07)"; x.fillRect(cx-w1/2,y1,w1,1.5); }
+}
+function drawFigure(x,cx,footY,h,color,t,ph,face){
+  const sway=Math.sin(t*.9+ph*10)*1.2; x.fillStyle=color;
+  x.beginPath(); x.ellipse(cx+sway,footY-h*.88,h*.075,h*.095,0,0,7); x.fill();
+  x.beginPath(); x.moveTo(cx+sway-h*.11,footY-h*.76); x.quadraticCurveTo(cx+sway,footY-h*.82,cx+sway+h*.11,footY-h*.76);
+  x.lineTo(cx+h*.13,footY-h*.32); x.lineTo(cx+h*.07,footY); x.lineTo(cx-h*.07,footY); x.lineTo(cx-h*.13,footY-h*.32); x.closePath(); x.fill();
+  if(face?.img) drawFace(x,cx+sway,footY-h*.88,h*.1,face,color);
+}
+function drawInterior(x,scene,Ly,t,P,fog,local){
+  const Wd=RW,H=RH; const corridor=scene.setting==="corridor";
+  // vanishing box
+  let k = corridor ? .16 : .42;
+  if(scene.motion==="recede") k = .26 - ((local/ (scene.duration_s||6)))*.18; // back wall shrinks: hallway lengthens
+  const cx=Wd/2+Math.sin(t*.11)*6, cy=H*.5;
+  const bw=Wd*k, bh=H*k*1.25; const bx=cx-bw/2, by=cy-bh/2;
+  const wall=mix(P.bot,P.sil,.25), wallDark=mix(P.top,P.sil,.35);
+  // ceiling
+  x.fillStyle=mix(wallDark,P.fog,fog*.3); x.beginPath(); x.moveTo(-20,-20); x.lineTo(Wd+20,-20); x.lineTo(bx+bw,by); x.lineTo(bx,by); x.fill();
+  // floor
+  const fg=x.createLinearGradient(0,by+bh,0,H); fg.addColorStop(0,mix(P.ground,P.fog,fog*.6)); fg.addColorStop(1,P.ground); x.fillStyle=fg; x.beginPath(); x.moveTo(-20,H+20); x.lineTo(Wd+20,H+20); x.lineTo(bx+bw,by+bh); x.lineTo(bx,by+bh); x.fill();
+  // walls
+  const lg=x.createLinearGradient(0,0,bx,0); lg.addColorStop(0,wallDark); lg.addColorStop(1,mix(wall,P.fog,fog*.6)); x.fillStyle=lg; x.beginPath(); x.moveTo(-20,-20); x.lineTo(bx,by); x.lineTo(bx,by+bh); x.lineTo(-20,H+20); x.fill();
+  const rg=x.createLinearGradient(Wd,0,bx+bw,0); rg.addColorStop(0,wallDark); rg.addColorStop(1,mix(wall,P.fog,fog*.6)); x.fillStyle=rg; x.beginPath(); x.moveTo(Wd+20,-20); x.lineTo(bx+bw,by); x.lineTo(bx+bw,by+bh); x.lineTo(Wd+20,H+20); x.fill();
+  // side doors along corridor
+  if(corridor){ for(let i=1;i<=4;i++){ const f=Math.pow(i/5,1.4); const lx=bx*f, ty=by*f, bot=(by+bh)+(H-(by+bh))*(1-f);
+      const depth=f; const dh=(bot-ty)*.62, dw=dh*.32*(1-depth*.2);
+      for(const side of [-1,1]){ const X= side<0 ? (bx - lx)*0 + bx*(1-f)*.0 + lx : Wd-lx; const x0=side<0? X+4*(1-f): X-4*(1-f)-dw*.5;
+        x.fillStyle=hexA(P.sil,.55); x.fillRect(side<0?X+2:X-dw*.6, bot-dh, dw*.5, dh) } } }
+  // back wall + far door/window
+  x.fillStyle=mix(wall,P.fog,fog*.85); x.fillRect(bx,by,bw,bh);
+  const glow=x.createRadialGradient(cx,cy+bh*.1,2,cx,cy,bw*1.4); glow.addColorStop(0,"rgba(255,226,170,.55)"); glow.addColorStop(1,"rgba(255,226,170,0)"); x.fillStyle=glow; x.fillRect(cx-bw*1.4,cy-bw*1.4,bw*2.8,bw*2.8);
+  if(corridor||scene.elements.includes("door")){ x.fillStyle=P.win; x.globalAlpha=.9; x.fillRect(cx-bw*.18,by+bh*.25,bw*.36,bh*.75); x.globalAlpha=1;
+    // light spilling under/through onto floor
+    x.fillStyle="rgba(255,226,170,.12)"; x.beginPath(); x.moveTo(cx-bw*.18,by+bh); x.lineTo(cx+bw*.18,by+bh); x.lineTo(cx+bw*.8,H); x.lineTo(cx-bw*.8,H); x.fill();
+  } else { x.fillStyle=hexA(P.win,.7); x.fillRect(cx-bw*.28,by+bh*.18,bw*.56,bh*.42); x.fillStyle=hexA(P.sil,.6); x.fillRect(cx-1,by+bh*.18,2,bh*.42); x.fillRect(cx-bw*.28,by+bh*.38,bw*.56,2) }
+  if(scene.elements.includes("stairs")) drawStairs(x,cx,H,by+bh*.6,P,fog,(d)=>mix(P.sil,P.fog,fog*(1-d)));
+}
+function post(o,L,t){
+  // colour cast
+  if(L.tint){ o.globalCompositeOperation="soft-light"; o.globalAlpha=.55; o.fillStyle=L.tint; o.fillRect(0,0,RW,RH) }
+  if(L.style==="vivid"){ o.globalCompositeOperation="overlay"; o.globalAlpha=.18; o.fillStyle="#ff9a5a"; o.fillRect(0,0,RW,RH) }
+  // flicker
+  o.globalCompositeOperation="source-over"; o.globalAlpha=Math.random()*.05; o.fillStyle="#000"; o.fillRect(0,0,RW,RH);
+  // grain
+  o.globalCompositeOperation="overlay"; o.globalAlpha=L.grain*.55; o.drawImage(GRAIN[(Math.random()*4)|0],0,0);
+  // vhs
+  if(L.style==="vhs"){ o.globalCompositeOperation="source-over"; o.globalAlpha=.12; o.fillStyle="#000"; for(let y=0;y<RH;y+=3) o.fillRect(0,y,RW,1);
+    const band=(t*37)%RH; o.globalAlpha=.6; o.drawImage(o.canvas,0,band,RW,8,3,band,RW,8);
+    o.globalCompositeOperation="screen"; o.globalAlpha=.08; o.fillStyle="#ff3060"; o.fillRect(0,0,RW,RH); }
+  // vignette
+  o.globalCompositeOperation="source-over"; o.globalAlpha=1;
+  const v=o.createRadialGradient(RW/2,RH/2,RH*.32,RW/2,RH/2,RH*.85); v.addColorStop(0,"rgba(0,0,0,0)"); v.addColorStop(1,`rgba(0,0,0,${.35+L.vignette*.5})`); o.fillStyle=v; o.fillRect(0,0,RW,RH);
+}
+
+/* ---------- Claude close read (optional, via sample) ---------- */
+async function claudeRead(sample, spec){
+  const sys=`You read dream reports for an app that turns them into short foggy, low-frame-rate, pseudo-realistic videos.
+Return ONLY JSON with this shape:
+{"title": string (2-6 words, evocative, no quotes),
+ "scenes": [{"text": string (the part of the report this scene covers, verbatim-ish), "setting": one of ${JSON.stringify(SETTINGS)}, "elements": subset of ${JSON.stringify(ELEMENTS)}, "light": one of ${JSON.stringify(LIGHTS)}, "motion": one of ${JSON.stringify(MOTIONS)}}] (1-4 scenes, in order),
+ "clarity": "high" | "low" | "unstated"  (only "high" if the dreamer explicitly says it was clear/vivid/sharp; "low" if they say hazy/blurry/can't remember),
+ "style": one of ${JSON.stringify(STYLES)} or null (only if the dreamer explicitly names a visual style or colour treatment),
+ "mood": array of up to 3 of ["fear","calm","sad","joy","uncanny","longing"],
+ "people": [{"who": string (exactly how the dreamer refers to them: "my dad", "a woman", "Sarah", "me"), "identity": one of ["known_clear","known_different","known_unclear","obscured","stranger","self"] (known_different = the dreamer knew who it was although the face was someone else's; known_unclear = known but the face won't come back; obscured = face hidden or turned away), "emotion": one of ["neutral","joy","sad","fear","anger","surprise"] or null, "minor": true if a child or teenager, false if clearly an adult, null if unsure, "scenes": [scene indices]}] (only people who appear; the dreamer is "me" only if they see themselves),
+ "dreamer_as_child": true if the dreamer was a child in the dream,
+ "prompt": string (one paragraph text-to-video prompt: concrete visual description of the scenes, pseudo-realistic photographic look, describe the fog/clarity and style the dreamer asked for, low frame rate, film grain)}`;
+  const res=await sample.json([{role:"user",content:sys+"\n\nDream report:\n"+spec.input.transcript}],{modelTier:"quick"});
+  return res;
+}
+function mergeClaude(spec,c){
+  if(!c||typeof c!=="object") return spec;
+  const s=structuredClone(spec);
+  if(Array.isArray(c.scenes)&&c.scenes.length){
+    s.scenes=c.scenes.slice(0,4).map(x=>({
+      text:String(x.text||"").slice(0,400),
+      setting:SETTINGS.includes(x.setting)?x.setting:"open",
+      elements:(Array.isArray(x.elements)?x.elements:[]).filter(e=>ELEMENTS.includes(e)),
+      light:LIGHTS.includes(x.light)?x.light:"overcast",
+      motion:MOTIONS.includes(x.motion)?x.motion:"drift", duration_s:6}));
+    s.look.light=s.scenes[0].light;
+  }
+  if(typeof c.title==="string"&&c.title.trim()) s.title=c.title.trim().slice(0,60);
+  const localClarity=spec.cues.some(q=>q.kind==="clarity");
+  if(!localClarity&&c.clarity==="high"){s.look.fog=0.15;s.look.fps=12;s.look.echo=.15;s.cues.push({kind:"clarity",phrase:"(read by Claude)",effect:"less fog",value:"high",at:null})}
+  if(!localClarity&&c.clarity==="low"){s.look.fog=0.7;s.cues.push({kind:"clarity",phrase:"(read by Claude)",effect:"more fog",value:"low",at:null})}
+  const localStyle=spec.look.style!=="natural";
+  if(!localStyle&&STYLES.includes(c.style)&&c.style!=="natural"){s.look.style=c.style;s.look.saturation={mono:0,noir:0,sepia:0,vhs:.85,vivid:1.35,pastel:.6}[c.style];s.cues.push({kind:"style",phrase:"(read by Claude)",effect:c.style,value:c.style,at:null})}
+  if(Array.isArray(c.mood)) s.mood=[...new Set(c.mood.filter(m=>["fear","calm","sad","joy","uncanny","longing"].includes(m)))];
+  mergeClaudePeople(spec,s,c);
+  if(typeof c.prompt==="string"&&c.prompt.length>20) s.prompt=c.prompt.slice(0,1500)+` Fog density ${s.look.fog}, ${s.look.fps}fps.`;
+  s.read_by="claude";
+  return s;
+}
+
+function mergeClaudePeople(orig,s,c){
+  const IDS=["known_clear","known_different","known_unclear","obscured","stranger","self"], EMO=["neutral","joy","sad","fear","anger","surprise"];
+  s.people=structuredClone(orig.people||[]); s.dreamer=structuredClone(orig.dreamer||{});
+  if(c.dreamer_as_child===true) s.dreamer.as_child=true;
+  RANGES.set(s, rangesFromScenes(s)); attachPeopleToScenes(s, RANGES.get(s));
+  if(!Array.isArray(c.people)) return;
+  let n=0;
+  for(const q of c.people.slice(0,8)){
+    const who=String(q.who||"").trim(); if(!who) continue;
+    if(/^(me|i|myself)$/i.test(who) && q.identity!=="self") continue;
+    const lw=who.toLowerCase();
+    let p=s.people.find(x=>x.who.toLowerCase()===lw)||s.people.find(x=>x.who.toLowerCase().includes(lw)||lw.includes(x.who.toLowerCase()));
+    if(!p){ p={id:"c_"+(++n),who,ref:null,relation:q.identity==="stranger"?"stranger":"other",identity:"stranger",identity_source:"default",emotion:null,minor:null,likeness:"generic",photo_ref:null,mentions:[],scenes:[]}; s.people.push(p) }
+    if(p.identity_source!=="said" && IDS.includes(q.identity)){ p.identity=q.identity; p.identity_source="claude"; p.face_clarity=FACE_CLARITY[q.identity] }
+    if(!p.emotion && EMO.includes(q.emotion)) p.emotion=q.emotion;
+    if(q.minor===true){ p.minor=true; if(p.likeness==="photo"){ p.likeness="generic"; p.photo_ref=null } }
+    else if(p.minor===null && q.minor===false) p.minor=false;
+    if(Array.isArray(q.scenes)){ const sc=q.scenes.filter(i=>Number.isInteger(i)&&i>=0&&i<s.scenes.length); if(sc.length) p.scenes=sc }
+  }
+  for(const sc of s.scenes) sc.people=[];
+  for(const p of s.people) for(const i of p.scenes) if(s.scenes[i] && !s.scenes[i].people.includes(p.id)) s.scenes[i].people.push(p.id);
+  for(const sc of s.scenes) if(sc.people.length && !sc.elements.includes("figure")) sc.elements.push("figure");
+}
+
+/* =====================================================================
+   APP
+   ===================================================================== */
+const $=id=>document.getElementById(id);
+const EXAMPLES=[
+  "I was in my grandmother's house but the hallway kept getting longer and longer. There was a door at the end with warm light coming under it and I couldn't reach it. Everything was hazy, I can't remember her face. Then suddenly I was outside by the sea at night and the moon was huge.",
+  "It was all in black and white, like an old film. I was walking through the city at night in the rain and someone was following me. I started running down the street. Then I was falling, just falling, really slowly.",
+  "Crystal clear, really vivid, like real life. I was standing in a field of tall grass at sunset with birds flying over, and my dad was far away waving at me. It was so calm and warm.",
+];
+const state={journal:[],current:null,renderer:null,inputMode:"text",dictation:null,sample:null,useClaude:true,roster:[],self:{photo:null},pid:0};
+
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function toast(msg){const t=$("toast");t.textContent=msg;t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>t.hidden=true,2200)}
+function tick(){const d=new Date();$("clock").textContent=d.toLocaleDateString(undefined,{weekday:"long"})+" · "+d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"})}
+tick();setInterval(tick,30000);
+
+const KLABEL={clarity:"Clarity",style:"Style",mood:"Mood",setting:"Place",motion:"Movement",light:"Light",people:"People"};
+function renderCues(el,cues){
+  el.textContent="";
+  if(!cues.length){const s=document.createElement("span");s.className="empty";s.textContent="Nothing specific yet. Mention how clear it was, colours, where you were, who was there.";el.appendChild(s);return}
+  const seen=new Set();
+  for(const c of cues){const key=c.kind+c.effect;if(seen.has(key))continue;seen.add(key);
+    const d=document.createElement("span");d.className="cue";d.dataset.k=c.kind;
+    const b=document.createElement("b");b.textContent=c.phrase;const i=document.createElement("i");i.textContent="→ "+c.effect;d.append(b,i);el.appendChild(d)}
+}
+function updateLive(){
+  const v=$("dreamText").value; const words=(v.trim().match(/\S+/g)||[]).length;
+  $("count").textContent=words+(words===1?" word":" words"); $("goBtn").disabled=words<3;
+  renderCues($("liveCues"),findCues(v).concat(findPeople(v,state.roster,!!state.self.photo).cues));
+}
+$("dreamText").addEventListener("input",()=>{updateLive(); if(state.inputMode==="voice"&&!state.listening) state.inputMode="text"});
+document.querySelectorAll("[data-ex]").forEach(b=>b.addEventListener("click",()=>{$("dreamText").value=EXAMPLES[+b.dataset.ex];state.inputMode="text";updateLive();$("dreamText").focus()}));
+
+/* --- transcript highlighting --- */
+function highlight(text,cues){
+  const spans=cues.filter(c=>c.at).sort((a,b)=>a.at[0]-b.at[0]); let out="",i=0;
+  for(const c of spans){ if(c.at[0]<i) continue; out+=esc(text.slice(i,c.at[0]))+`<mark data-k="${esc(c.kind)}" title="${esc(KLABEL[c.kind]+": "+c.effect)}">${esc(text.slice(c.at[0],c.at[1]))}</mark>`; i=c.at[1] }
+  return out+esc(text.slice(i));
+}
+
+/* --- dials --- */
+const DIALS=[
+  {id:"dFog",key:"fog",o:"oFog",w:"wFog",toUI:v=>Math.round(v*100),fromUI:v=>v/100,fmt:v=>Math.round(v*100)+"%"},
+  {id:"dFps",key:"fps",o:"oFps",w:"wFps",toUI:v=>v,fromUI:v=>+v,fmt:v=>v+" fps"},
+  {id:"dTone",key:"fog_tone",o:"oTone",w:"wTone",toUI:v=>Math.round((v??.5)*100),fromUI:v=>v/100,fmt:v=>{v=v??.5;return v<.35?"pale":v>.65?"smoke":"scene"}},
+  {id:"dGrain",key:"grain",o:"oGrain",w:"wGrain",toUI:v=>Math.round(v*100),fromUI:v=>v/100,fmt:v=>Math.round(v*100)+"%"},
+  {id:"dSmear",key:"echo",o:"oSmear",w:"wSmear",toUI:v=>Math.round(v*100),fromUI:v=>v/100,fmt:v=>Math.round(v*100)+"%"},
+];
+function reasonFor(key,spec){
+  const cl=spec.cues.filter(c=>c.kind==="clarity"); const st=spec.cues.filter(c=>c.kind==="style"&&!String(c.value).startsWith("tint"));
+  if(key==="fog"){ if(!cl.length) return "Default dream haze"; const hi=cl.filter(c=>c.value==="high").length, lo=cl.length-hi; return (hi>lo?"Cleared: ":"Thickened: ")+"“"+cl[0].phrase+"”" }
+  if(key==="fps"){ const m=spec.cues.find(c=>c.kind==="motion"&&(c.value==="slow"||c.value==="fast")); if(m) return "“"+m.phrase+"”"; return spec.look.fps>=12?"Smoother, since it was clear":"Dream stutter" }
+  if(key==="style"){ return st.length?"You said “"+st[0].phrase+"”":"No style named" }
+  if(key==="fog_tone") return "Pale mist ↔ black smoke";
+  if(key==="grain") return spec.look.style==="vhs"?"Tape noise":"Film grain";
+  if(key==="echo") return spec.look.echo>=.5?"Slowed, frames linger":"Frames bleed into each other";
+  return "";
+}
+function syncDials(){
+  const s=state.current; if(!s) return; const L=Object.assign({},s.look,s.overrides);
+  for(const d of DIALS){ $(d.id).value=d.toUI(L[d.key]); $(d.o).textContent=d.fmt(L[d.key]); const w=$(d.w); const tuned=d.key in s.overrides; w.textContent=tuned?"Tuned by you":reasonFor(d.key,s); w.classList.toggle("tuned",tuned) }
+  $("dStyle").value=L.style; const ws=$("wStyle"); const tuned="style" in s.overrides; ws.textContent=tuned?"Tuned by you":reasonFor("style",s); ws.classList.toggle("tuned",tuned);
+  $("fpsLabel").textContent=L.fps+" fps · fog "+Math.round(L.fog*100)+"%";
+}
+for(const d of DIALS){ $(d.id).addEventListener("input",e=>{ const s=state.current; if(!s) return; s.overrides[d.key]=d.fromUI(+e.target.value); afterTune() }) }
+$("dStyle").addEventListener("change",e=>{const s=state.current;if(!s)return;const v=e.target.value;s.overrides.style=v;s.overrides.saturation={natural:.72,mono:0,noir:0,sepia:0,vhs:.85,vivid:1.35,pastel:.6}[v];afterTune()});
+function afterTune(){ if(!$("clip").hidden) showView("live"); syncDials(); state.renderer?.update?.(state.current); showSpec(); }
+
+function showSpec(){ const s=state.current; if(!s) return; const {read_by,...rest}=s; $("specOut").textContent=JSON.stringify(Object.assign({},rest,{look:Object.assign({},s.look,s.overrides)}),null,2); $("readBy").textContent= s.read_by==="claude"?"Scenes and prompt were read by Claude; the look comes from your own words.":"Read on this device from keywords." }
+$("copySpec").addEventListener("click",()=>{ const txt=$("specOut").textContent; navigator.clipboard?.writeText(txt).then(()=>toast("Spec copied"),()=>{selectText($("specOut"));toast("Selected. Copy it with your keyboard.")}) ?? (selectText($("specOut")),toast("Selected. Copy it with your keyboard.")) });
+function selectText(el){const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r)}
+
+/* --- showing a dream --- */
+async function showDream(spec,{scroll}={}){
+  state.current=spec;
+  $("resH").textContent=spec.title;
+  $("transcript").innerHTML=highlight(spec.input.transcript,spec.cues);
+  syncDials(); showSpec(); drawScenePills(); syncFeedback(); renderWho(spec);
+  if(state.renderer) state.renderer.stop();
+  const r=await Placeholder.render(spec);
+  state.renderer=r;
+  const cv=$("stage");
+  if(r.kind==="live"){ r.onScene=i=>setScene(i); r.start(cv); state.paused=false; $("playBtn").textContent="Pause"; $("player").classList.remove("paused"); $("recLabel").textContent="Placeholder preview" }
+  showView(spec._video?"video":"live");
+  if(!spec._video && !spec._rendering) startPipeline(spec);
+  renderJournal();
+  if(scroll && matchMedia("(max-width: 919px)").matches) $("result").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
+}
+function showView(v){
+  const s=state.current, vid=$("clip"), cv=$("stage"); const useVid=v==="video"&&s?._video;
+  $("viewSwitch").hidden=!s?._video;
+  $("vRendered").setAttribute("aria-pressed",String(!!useVid)); $("vPreview").setAttribute("aria-pressed",String(!useVid));
+  vid.hidden=!useVid; cv.hidden=!!useVid; $("player").classList.toggle("has-video",!!useVid); $("sceneCaption").parentElement.hidden=!!useVid;
+  if(useVid){ if(vid.getAttribute("src")!==s._video.src){ vid.src=s._video.src; if(s._video.poster) vid.poster=s._video.poster } vid.style.filter=""; vid.play().catch(()=>{}); $("recLabel").textContent="Rendered by pipeline"; $("fpsLabel").textContent=(s.look.fps)+" fps" }
+  else { vid.pause(); $("recLabel").textContent=state.paused?"Paused":"Placeholder preview"; syncDials() }
+}
+$("vRendered").addEventListener("click",()=>showView("video"));
+$("vPreview").addEventListener("click",()=>showView("live"));
+async function startPipeline(spec){
+  spec._rendering=true;
+  try{
+    const res=await PipelineRenderer.render(spec,{onProgress:st=>{ if(state.current!==spec) return; $("readingBar").hidden=false;
+      $("readingText").textContent="Rendering the full video"+(st.eta_s?`, about ${Math.ceil(st.eta_s/60)} min left`:st.progress!=null?` (${Math.round(st.progress*100)}%)`:"…") }});
+    spec._video=res; if(state.current===spec){ $("readingBar").hidden=true; showView("video") }
+  }catch(_){ /* no pipeline yet: the live preview stays */ }
+  finally{ spec._rendering=false }
+}
+let curScene=-1;
+function setScene(i){ if(i===curScene) return; curScene=i; const s=state.current; if(!s) return; $("sceneCaption").textContent=s.scenes[i]?.text||""; document.querySelectorAll(".scene-pill").forEach((p,k)=>p.setAttribute("aria-current",k===i?"true":"false")) }
+function drawScenePills(){
+  const el=$("scenes"); el.textContent=""; curScene=-1; const s=state.current;
+  const NAMES={corridor:"Hallway",room:"Room",water:"Water",city:"City",forest:"Woods",field:"Field",mountains:"Hills",open:"Open ground",underwater:"Underwater"};
+  s.scenes.forEach((sc,i)=>{ const b=document.createElement("button"); b.type="button"; b.className="scene-pill";
+    b.textContent=`${i+1}. ${NAMES[sc.setting]||sc.setting} · ${sc.light}${sc.motion!=="drift"?" · "+sc.motion:""}${sc.elements.length?" · "+sc.elements.slice(0,3).join(", "):""}`;
+    b.addEventListener("click",()=>{state.renderer?.jump?.(i);setScene(i)}); el.appendChild(b) });
+}
+$("playBtn").addEventListener("click",()=>{ const r=state.renderer; if(!r?.setPaused) return; state.paused=!state.paused; r.setPaused(state.paused); $("playBtn").textContent=state.paused?"Play":"Pause"; $("player").classList.toggle("paused",state.paused); $("recLabel").textContent=state.paused?"Paused":"Placeholder preview" });
+$("reseedBtn").addEventListener("click",()=>{ const s=state.current; if(!s) return; s.seed=(s.seed*16807+12345)>>>0; state.renderer?.update?.(s); showSpec(); toast("New take") });
+
+/* --- feedback --- */
+function syncFeedback(){ const f=state.current?.feedback; document.querySelectorAll("[data-fb]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.fb===f))) }
+document.querySelectorAll("[data-fb]").forEach(b=>b.addEventListener("click",()=>{ if(!state.current) return; state.current.feedback=b.dataset.fb; syncFeedback(); renderJournal(); toast("Noted") }));
+
+/* --- journal --- */
+function renderJournal(){
+  const el=$("journal"); el.textContent="";
+  for(const e of state.journal){
+    const b=document.createElement("button"); b.type="button"; b.className="entry"; b.setAttribute("aria-current",String(e===state.current));
+    const img=document.createElement("img"); img.className="thumb"; img.alt=""; if(e._video?.poster){img.src=e._video.poster} else if(e._thumb){img.src=e._thumb; img.style.filter=cssFor(Object.assign({},e.look,e.overrides))}
+    const m=document.createElement("div"); m.className="meta";
+    const tag=document.createElement("span"); tag.className="tag"; tag.textContent=(e._example?"Example · ":"")+(e.input.mode==="voice"?"Spoken":"Typed")+(e.feedback?" · "+({no:"not really",some:"partly",yes:"that's it"}[e.feedback]):"");
+    const t=document.createElement("span"); t.className="t"; t.textContent=e.title;
+    const s=document.createElement("span"); s.className="s"; s.textContent=e.summary;
+    m.append(tag,t,s); b.append(img,m);
+    b.addEventListener("click",()=>showDream(e,{scroll:true}));
+    el.appendChild(b);
+  }
+}
+function captureThumb(e){ setTimeout(()=>{ if(state.current===e){ try{ e._thumb=$("stage").toDataURL("image/jpeg",.75); renderJournal() }catch(_){} } },1400) }
+
+/* --- visualise --- */
+$("goBtn").addEventListener("click",async()=>{
+  const text=$("dreamText").value.trim(); if(!text) return;
+  if(state.dictation&&state.listening){ try{await state.dictation.stop()}catch(_){} }
+  const spec=buildSpec(text,state.inputMode,hashStr(text+Date.now()));
+  state.journal.unshift(spec);
+  await showDream(spec,{scroll:true}); captureThumb(spec);
+  if(state.sample && $("claudeToggle").checked){
+    $("readingBar").hidden=false; $("readingText").textContent="Claude is reading your dream closely…";
+    try{ const c=await claudeRead(state.sample,spec); const merged=mergeClaude(spec,c); const idx=state.journal.indexOf(spec); if(idx>=0) state.journal[idx]=merged; if(state.current===spec){ merged.overrides=spec.overrides; await showDream(merged); captureThumb(merged)} }
+    catch(e){ if(e&&e.code==="not_granted"){ $("claudeToggleWrap").hidden=true; state.sample=null } $("readingText").textContent="Read on this device instead."; setTimeout(()=>$("readingBar").hidden=true,1800); return }
+    $("readingBar").hidden=true;
+  }
+});
+
+/* --- voice (dictation capability) --- */
+async function setupVoice(){
+  if(!window.claude?.use){ $("micNote").textContent="Voice works when this opens on claude.ai in Chrome or the desktop app."; return }
+  const [d,s]=await Promise.all([window.claude.use("dictation").catch(()=>null),window.claude.use("sample").catch(()=>null)]);
+  if(s){ state.sample=s; $("claudeToggleWrap").hidden=false }
+  if(!d){ $("micNote").textContent="Voice isn't available in this browser. Typing works everywhere."; return }
+  state.dictation=d; const btn=$("micBtn"); btn.hidden=false; $("micNote").textContent="";
+  d.onPartial(({text})=>{ const p=$("partial"); p.hidden=!text; p.textContent=text });
+  d.onFinal(({text})=>{ const ta=$("dreamText"); let v=ta.value; ta.value = v ? v+text : text.replace(/^\s+/,""); state.inputMode="voice"; updateLive() });
+  d.onState(({state:st,reason})=>{
+    state.listening=st!=="idle"; btn.dataset.state=st; $("micLabel").textContent= st==="listening"?"Listening… tap to stop": st==="starting"?"Opening mic…": st==="finishing"?"Catching last words…":"Speak it";
+    if(st==="idle"){ $("partial").hidden=true;
+      if(reason==="not_granted"){btn.hidden=true;$("micNote").textContent="Microphone is off for this page. Typing still works."}
+      else if(reason==="unavailable"){btn.hidden=true;$("micNote").textContent="Voice isn't available for this account. Typing works."}
+      else if(reason==="rate_limited") $("micNote").textContent="The mic is busy. Try again in a moment.";
+      else if(reason==="upstream_error") $("micNote").textContent="The mic stopped unexpectedly. Tap to try again.";
+      else $("micNote").textContent="";
+    }
+  });
+  btn.addEventListener("click",()=>{
+    if(d.active()){ d.stop().catch(()=>{}); return }
+    d.start().catch(e=>{ if(e?.code==="not_granted"){btn.hidden=true;$("micNote").textContent="Microphone is off for this page. Typing still works."} else if(e?.code==="dismissed"){$("micNote").textContent="Tap again when you're ready."} });
+  });
+}
+
+
+/* --- people: your face and the people in your dreams (kept in memory only) --- */
+const FACE_IMG=new Map();     // id -> canvas (square face crop) for the live preview
+async function loadPhoto(file){
+  const url=URL.createObjectURL(file);
+  try{
+    const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url});
+    const s=Math.min(1,640/Math.max(img.width,img.height)); const c=mkCanvas(Math.round(img.width*s),Math.round(img.height*s));
+    c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+    // face crop: the browser's own face detector when there is one, else head-and-shoulders framing
+    let box=null;
+    if("FaceDetector" in window){ try{ const f=await new FaceDetector({fastMode:true,maxDetectedFaces:1}).detect(c); if(f[0]) box=f[0].boundingBox }catch(_){} }
+    const side=box? Math.max(box.width,box.height)*1.5 : Math.min(c.width,c.height)*.62;
+    const cx=box? box.x+box.width/2 : c.width/2, cy=box? box.y+box.height/2 : c.height*.4;
+    const face=mkCanvas(128,128); face.getContext("2d").drawImage(c,cx-side/2,cy-side/2,side,side,0,0,128,128);
+    return {photo:c.toDataURL("image/jpeg",.85), face, found:!!box};
+  } finally { URL.revokeObjectURL(url) }
+}
+function avatarEl(id,name){ const a=document.createElement("span"); a.className="avatar"; const f=FACE_IMG.get(id);
+  if(f) a.style.backgroundImage=`url(${f.toDataURL("image/jpeg",.8)})`; else a.textContent=(name||"?").trim().slice(0,1).toUpperCase()||"?"; return a }
+function photoButton(label,onFile){
+  const l=document.createElement("label"); l.className="ghost fileb"; l.textContent=label;
+  const i=document.createElement("input"); i.type="file"; i.accept="image/*"; i.setAttribute("aria-label",label);
+  i.addEventListener("change",async()=>{ const f=i.files?.[0]; if(f) await onFile(f); i.value="" }); l.appendChild(i); return l;
+}
+function field(label,el){ const l=document.createElement("label"); l.className="f"; l.append(label,el); return l }
+function renderPeople(){
+  const g=$("peopleGrid"); g.textContent="";
+  // you
+  const me=document.createElement("div"); me.className="pcard";
+  const who=document.createElement("div"); who.className="who"; const nm=document.createElement("div");
+  nm.innerHTML=`<strong>You</strong><br><span class="note">Used when you see yourself, when you were a child in the dream, and for reaction shots.</span>`;
+  who.append(avatarEl("self","You"),nm);
+  const row=document.createElement("div"); row.className="row";
+  row.append(photoButton(state.self.photo?"Change photo":"Add your photo",async f=>{ const r=await loadPhoto(f); state.self.photo=r.photo; FACE_IMG.set("self",r.face); afterPeople(r.found?"Face found":"Photo added. Centre your face if it looks off.") }));
+  if(state.self.photo){ const x=document.createElement("button"); x.className="ghost"; x.type="button"; x.textContent="Remove"; x.onclick=()=>{state.self.photo=null;FACE_IMG.delete("self");afterPeople("Photo removed")}; row.append(x) }
+  me.append(who,row); g.appendChild(me);
+  // others
+  for(const p of state.roster){
+    const c=document.createElement("div"); c.className="pcard";
+    const w=document.createElement("div"); w.className="who";
+    const name=document.createElement("input"); name.type="text"; name.value=p.name; name.placeholder="Name, e.g. Dad or Sarah";
+    name.addEventListener("change",()=>{p.name=name.value.trim();afterPeople()});
+    w.append(avatarEl(p.id,p.name),field("Name",name));
+    const al=document.createElement("input"); al.type="text"; al.value=p.aliases||""; al.placeholder="Pops, my old man";
+    al.addEventListener("change",()=>{p.aliases=al.value;afterPeople()});
+    const rel=document.createElement("select");
+    for(const [k,v] of Object.entries(REL_LABEL)){ const o=document.createElement("option"); o.value=k; o.textContent=v; if(p.relation===k) o.selected=true; rel.appendChild(o) }
+    rel.addEventListener("change",()=>{p.relation=rel.value; if(MINOR_REL.has(p.relation)&&!p.minor){p.minor=true} afterPeople()});
+    const minor=document.createElement("label"); minor.className="consent";
+    minor.innerHTML=`<input type="checkbox" ${p.minor?"checked":""}> <span>Under 18. Dreams with them stay PG, and their photo is never used: they appear with a soft, generic face.</span>`;
+    minor.querySelector("input").addEventListener("change",e=>{p.minor=e.target.checked;afterPeople()});
+    const row=document.createElement("div"); row.className="row";
+    if(!p.minor) row.append(photoButton(p.photo?"Change photo":"Add photo",async f=>{ const r=await loadPhoto(f); p.photo=r.photo; FACE_IMG.set(p.id,r.face); afterPeople(r.found?"Face found":"Photo added") }));
+    const rm=document.createElement("button"); rm.className="ghost"; rm.type="button"; rm.textContent="Remove person"; rm.onclick=()=>{state.roster=state.roster.filter(x=>x!==p);FACE_IMG.delete(p.id);afterPeople("Removed")};
+    row.append(rm);
+    c.append(w,field("Also called (comma separated)",al),field("Who they are to you",rel),minor);
+    if(p.photo&&!p.minor){
+      const cs=document.createElement("label"); cs.className="consent";
+      cs.innerHTML=`<input type="checkbox" ${p.consent?"checked":""}> <span><b>${esc(p.name||"They")}</b> knows and is OK with their photo being used to picture them in my dreams. Without this, they appear with a generic face.</span>`;
+      cs.querySelector("input").addEventListener("change",e=>{p.consent=e.target.checked;afterPeople()});
+      c.append(cs);
+    }
+    const tag=document.createElement("span"); tag.className="ptag";
+    const ok=p.photo&&p.consent&&!p.minor; tag.dataset.ok=ok?"1":"0";
+    tag.textContent= p.minor?"Generic face, PG only" : ok?"Their face will be used" : p.photo?"Photo waiting for their OK" : "Generic face";
+    c.append(row,tag); g.appendChild(c);
+  }
+}
+function afterPeople(msg){ renderPeople(); const s=state.current; if(s){ relinkPeople(s); state.renderer?.update?.(s); renderWho(s); showSpec(); $("transcript").innerHTML=highlight(s.input.transcript,s.cues) } if(msg) toast(msg) }
+$("addPerson").addEventListener("click",()=>{ state.roster.push({id:"p_"+(++state.pid),name:"",aliases:"",relation:"other",minor:false,photo:null,consent:false}); renderPeople(); const ins=$("peopleGrid").querySelectorAll(".pcard input[type=text]"); ins[ins.length-2]?.focus() });
+$("forgetPhotos").addEventListener("click",()=>{ state.self.photo=null; for(const p of state.roster){p.photo=null;p.consent=false} FACE_IMG.clear(); afterPeople("All photos forgotten") });
+const ID_LABEL={known_clear:"face clear",known_different:"different face, still them",known_unclear:"face won't come into focus",obscured:"face hidden",stranger:"stranger",self:"you"};
+function renderWho(s){
+  const el=$("whoIn"); el.textContent=""; const ps=s.people||[];
+  $("whoWrap").hidden=!ps.length && !s.dreamer?.as_child;
+  for(const p of ps){ const d=document.createElement("span"); d.className="wp";
+    const i=document.createElement("i"); i.textContent=ID_LABEL[p.identity]+(p.emotion&&p.emotion!=="neutral"?" · "+p.emotion:"")+(p.likeness==="photo"?" · photo":"")+(p.minor?" · under 18":"");
+    d.append(avatarEl(p.ref||p.id,p.who), document.createTextNode(p.who), i); el.appendChild(d) }
+  if(s.dreamer?.as_child){ const d=document.createElement("span"); d.className="wp"; d.append(avatarEl("self","You"),document.createTextNode("You, as a child")); const i=document.createElement("i"); i.textContent="dream held to PG"; d.append(i); el.appendChild(d) }
+}
+/* the live preview draws a face onto the figure, treated the way the dreamer remembered it */
+function faceForScene(scene,k){
+  const s=state.current; if(!s?.people) return null; const ids=(scene.people||[]).filter(id=>id!=="self"||s.dreamer?.seen);
+  const p=s.people.find(x=>x.id===ids[k]); if(!p) return null;
+  return {p, img: p.likeness==="photo" ? FACE_IMG.get(p.ref||p.id) : null};
+}
+const _tmpFace=mkCanvas(128,128);
+function drawFace(x,hx,hy,r,face,color){
+  const {p,img}=face; x.save(); x.beginPath(); x.ellipse(hx,hy,r*.82,r,0,0,7); x.clip();
+  if(img){
+    const t=_tmpFace.getContext("2d"); t.setTransform(1,0,0,1,0,0); t.globalAlpha=1; t.filter="none"; t.clearRect(0,0,128,128);
+    if(p.identity==="known_different"){ t.setTransform(-1.08,0,0,1.18,128+5,-14); t.drawImage(img,0,0); t.setTransform(1,0,0,1,0,0); t.globalCompositeOperation="color"; t.fillStyle="rgba(170,120,90,.35)"; t.fillRect(0,0,128,128); t.globalCompositeOperation="source-over" }
+    else t.drawImage(img,0,0);
+    const blurPx={known_clear:0,known_different:1,known_unclear:6,obscured:3,stranger:6,self:0}[p.identity]||0;
+    if(blurPx){ const sm=mkCanvas(Math.max(2,Math.round(128/(blurPx*3))),Math.max(2,Math.round(128/(blurPx*3)))); sm.getContext("2d").drawImage(_tmpFace,0,0,sm.width,sm.height); t.clearRect(0,0,128,128); t.imageSmoothingEnabled=true; t.drawImage(sm,0,0,128,128) }
+    x.drawImage(_tmpFace,hx-r,hy-r*1.05,r*2,r*2.1);
+  } else { x.fillStyle=color; x.fillRect(hx-r,hy-r,r*2,r*2) }
+  if(p.identity==="obscured"){ x.fillStyle="rgba(8,8,14,.85)"; x.fillRect(hx-r,hy-r,r*2,r*2) }
+  x.restore();
+}
+
+/* --- boot: preload examples so the page opens on a working dream --- */
+function boot(){
+  EXAMPLES.forEach((t,i)=>{ const s=buildSpec(t,"text",hashStr("example"+i)); s._example=true; state.journal.push(s) });
+  // fixed example thumbs: render each briefly offscreen
+  Promise.all(state.journal.map(async e=>{ const v=await PipelineRenderer.lookup(e); if(v) e._video=v }))
+    .then(()=>showDream(state.journal[0])).then(()=>{ captureThumb(state.journal[0]); thumbOthers() });
+  updateLive(); setupVoice(); renderPeople();
+}
+async function thumbOthers(){
+  for(const e of state.journal.slice(1)){ if(e._video?.poster) continue;
+    const r=await Placeholder.render(e); const c=mkCanvas(RW,RH); r.start(c);
+    await new Promise(res=>setTimeout(res,900)); try{ e._thumb=c.toDataURL("image/jpeg",.75) }catch(_){} r.stop();
+  }
+  renderJournal();
+}
+boot();
+</script>
+

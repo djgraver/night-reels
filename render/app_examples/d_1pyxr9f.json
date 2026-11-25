@@ -1,0 +1,175 @@
+{
+ "version": 1,
+ "id": "d_1pyxr9f",
+ "created_at": "2026-11-25T13:43:21.140Z",
+ "input": {
+  "mode": "text",
+  "transcript": "I was in my grandmother's house but the hallway kept getting longer and longer. There was a door at the end with warm light coming under it and I couldn't reach it. Everything was hazy, I can't remember her face. Then suddenly I was outside by the sea at night and the moon was huge."
+ },
+ "title": "The hallway that kept going",
+ "summary": "I was in my grandmother's house but the hallway kept getting longer and longer. There was a door at the end with warm light coming under…",
+ "look": {
+  "fog": 0.78,
+  "fps": 8,
+  "grain": 0.38,
+  "echo": 0.42,
+  "vignette": 0.55,
+  "style": "natural",
+  "saturation": 0.72,
+  "tint": null,
+  "light": "interior"
+ },
+ "mood": [],
+ "scenes": [
+  {
+   "text": "I was in my grandmother's house but the hallway kept getting longer and longer. There was a door at the end with warm light coming under it and I couldn't reach it. Everything was hazy, I can't remember her face.",
+   "setting": "corridor",
+   "elements": [
+    "figure",
+    "house",
+    "door",
+    "glow"
+   ],
+   "light": "interior",
+   "motion": "recede",
+   "duration_s": 6
+  },
+  {
+   "text": "Then suddenly I was outside by the sea at night and the moon was huge.",
+   "setting": "water",
+   "elements": [
+    "moon"
+   ],
+   "light": "night",
+   "motion": "drift",
+   "duration_s": 6
+  }
+ ],
+ "cues": [
+  {
+   "kind": "setting",
+   "phrase": "grandmother",
+   "effect": "a figure",
+   "value": "+figure",
+   "at": [
+    12,
+    23
+   ]
+  },
+  {
+   "kind": "setting",
+   "phrase": "house",
+   "effect": "house",
+   "value": "+house",
+   "at": [
+    26,
+    31
+   ]
+  },
+  {
+   "kind": "setting",
+   "phrase": "hallway",
+   "effect": "corridor",
+   "value": "corridor",
+   "at": [
+    40,
+    47
+   ]
+  },
+  {
+   "kind": "motion",
+   "phrase": "kept getting longer",
+   "effect": "receding",
+   "value": "recede",
+   "at": [
+    48,
+    67
+   ]
+  },
+  {
+   "kind": "setting",
+   "phrase": "door",
+   "effect": "door",
+   "value": "+door",
+   "at": [
+    92,
+    96
+   ]
+  },
+  {
+   "kind": "setting",
+   "phrase": "light",
+   "effect": "glow",
+   "value": "+glow",
+   "at": [
+    118,
+    123
+   ]
+  },
+  {
+   "kind": "motion",
+   "phrase": "couldn't reach",
+   "effect": "receding",
+   "value": "recede",
+   "at": [
+    146,
+    160
+   ]
+  },
+  {
+   "kind": "clarity",
+   "phrase": "hazy",
+   "effect": "more fog",
+   "value": "low",
+   "at": [
+    180,
+    184
+   ]
+  },
+  {
+   "kind": "clarity",
+   "phrase": "can't remember",
+   "effect": "more fog",
+   "value": "low",
+   "at": [
+    188,
+    202
+   ]
+  },
+  {
+   "kind": "setting",
+   "phrase": "sea",
+   "effect": "water",
+   "value": "water",
+   "at": [
+    248,
+    251
+   ]
+  },
+  {
+   "kind": "light",
+   "phrase": "night",
+   "effect": "night",
+   "value": "night",
+   "at": [
+    255,
+    260
+   ]
+  },
+  {
+   "kind": "setting",
+   "phrase": "moon",
+   "effect": "moon",
+   "value": "+moon",
+   "at": [
+    269,
+    273
+   ]
+  }
+ ],
+ "overrides": {},
+ "read_by": "device",
+ "seed": 3747118659,
+ "prompt": "I was in my grandmother's house but the hallway kept getting longer and longer. There was a door at the end with warm light coming under it and I couldn't reach it. Everything was hazy, I can't remember her face. [corridor; figure, house, door, glow; interior light; recede] → Then suddenly I was outside by the sea at night and the moon was huge. [water; moon; night light]. Pseudo-realistic, photographic, 35mm, muted natural colour, dense fog, shapes barely visible, heavy diffusion, film grain, gentle vignette, low frame rate 8fps, slight frame ghosting, dream logic.",
+ "negative_prompt": "cartoon, illustration, anime, crisp HDR, oversharpened, text, captions, watermark, logo, extra limbs, distorted faces, clean digital look"
+}

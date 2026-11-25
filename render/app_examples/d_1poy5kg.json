@@ -1,0 +1,171 @@
+{
+ "version": 1,
+ "id": "d_1poy5kg",
+ "created_at": "2026-11-25T13:43:21.159Z",
+ "input": {
+  "mode": "text",
+  "transcript": "It was all in black and white, like an old film. I was walking through the city at night in the rain and someone was following me. I started running down the street. Then I was falling, just falling, really slowly."
+ },
+ "title": "The city, falling",
+ "summary": "It was all in black and white, like an old film. I was walking through the city at night in the rain and someone was following me. I star…",
+ "look": {
+  "fog": 0.55,
+  "fps": 6,
+  "grain": 0.4,
+  "echo": 0.6,
+  "vignette": 0.55,
+  "style": "noir",
+  "saturation": 0,
+  "tint": null,
+  "light": "night"
+ },
+ "mood": [],
+ "scenes": [
+  {
+   "text": "It was all in black and white, like an old film. I was walking through the city at night in the rain and someone was following me. I started running down the street.",
+   "setting": "city",
+   "elements": [
+    "rain",
+    "figure"
+   ],
+   "light": "night",
+   "motion": "chase",
+   "duration_s": 6
+  },
+  {
+   "text": "Then I was falling, just falling, really slowly.",
+   "setting": "city",
+   "elements": [],
+   "light": "night",
+   "motion": "falling",
+   "duration_s": 6
+  }
+ ],
+ "cues": [
+  {
+   "kind": "style",
+   "phrase": "black and white",
+   "effect": "black & white",
+   "value": "mono",
+   "at": [
+    14,
+    29
+   ]
+  },
+  {
+   "kind": "style",
+   "phrase": "like an old film",
+   "effect": "noir contrast",
+   "value": "noir",
+   "at": [
+    31,
+    47
+   ]
+  },
+  {
+   "kind": "setting",
+   "phrase": "city",
+   "effect": "city",
+   "value": "city",
+   "at": [
+    75,
+    79
+   ]
+  },
+  {
+   "kind": "light",
+   "phrase": "night",
+   "effect": "night",
+   "value": "night",
+   "at": [
+    83,
+    88
+   ]
+  },
+  {
+   "kind": "setting",
+   "phrase": "rain",
+   "effect": "rain",
+   "value": "+rain",
+   "at": [
+    96,
+    100
+   ]
+  },
+  {
+   "kind": "setting",
+   "phrase": "someone",
+   "effect": "a figure",
+   "value": "+figure",
+   "at": [
+    105,
+    112
+   ]
+  },
+  {
+   "kind": "motion",
+   "phrase": "following me",
+   "effect": "chase",
+   "value": "chase",
+   "at": [
+    117,
+    129
+   ]
+  },
+  {
+   "kind": "motion",
+   "phrase": "running",
+   "effect": "chase",
+   "value": "chase",
+   "at": [
+    141,
+    148
+   ]
+  },
+  {
+   "kind": "setting",
+   "phrase": "street",
+   "effect": "city",
+   "value": "city",
+   "at": [
+    158,
+    164
+   ]
+  },
+  {
+   "kind": "motion",
+   "phrase": "falling",
+   "effect": "falling",
+   "value": "falling",
+   "at": [
+    177,
+    184
+   ]
+  },
+  {
+   "kind": "motion",
+   "phrase": "falling",
+   "effect": "falling",
+   "value": "falling",
+   "at": [
+    191,
+    198
+   ]
+  },
+  {
+   "kind": "motion",
+   "phrase": "slowly",
+   "effect": "slower frames",
+   "value": "slow",
+   "at": [
+    207,
+    213
+   ]
+  }
+ ],
+ "overrides": {},
+ "read_by": "device",
+ "seed": 3730341040,
+ "prompt": "It was all in black and white, like an old film. I was walking through the city at night in the rain and someone was following me. I started running down the street. [city; rain, figure; night light; chase] → Then I was falling, just falling, really slowly. [city; night light; falling]. Pseudo-realistic, photographic, 35mm, high-contrast black and white film noir, thick dreamlike fog, soft diffusion, details dissolving into mist, film grain, gentle vignette, low frame rate 6fps, slight frame ghosting, dream logic.",
+ "negative_prompt": "cartoon, illustration, anime, crisp HDR, oversharpened, text, captions, watermark, logo, extra limbs, distorted faces, clean digital look"
+}

@@ -1,0 +1,166 @@
+{
+ "version": 1,
+ "id": "d_1qiwynd",
+ "created_at": "2026-11-25T13:43:21.164Z",
+ "input": {
+  "mode": "text",
+  "transcript": "Crystal clear, really vivid, like real life. I was standing in a field of tall grass at sunset with birds flying over, and my dad was far away waving at me. It was so calm and warm."
+ },
+ "title": "The field",
+ "summary": "Crystal clear, really vivid, like real life. I was standing in a field of tall grass at sunset with birds flying over, and my dad was far…",
+ "look": {
+  "fog": 0.08,
+  "fps": 12,
+  "grain": 0.22,
+  "echo": 0.15,
+  "vignette": 0.55,
+  "style": "natural",
+  "saturation": 0.72,
+  "tint": null,
+  "light": "dusk"
+ },
+ "mood": [
+  "longing",
+  "calm"
+ ],
+ "scenes": [
+  {
+   "text": "Crystal clear, really vivid, like real life. I was standing in a field of tall grass at sunset with birds flying over, and my dad was far away waving at me. It was so calm and warm.",
+   "setting": "field",
+   "elements": [
+    "birds",
+    "figure"
+   ],
+   "light": "dusk",
+   "motion": "flying",
+   "duration_s": 6
+  }
+ ],
+ "cues": [
+  {
+   "kind": "clarity",
+   "phrase": "Crystal clear",
+   "effect": "less fog",
+   "value": "high",
+   "at": [
+    0,
+    13
+   ]
+  },
+  {
+   "kind": "clarity",
+   "phrase": "vivid",
+   "effect": "less fog",
+   "value": "high",
+   "at": [
+    22,
+    27
+   ]
+  },
+  {
+   "kind": "clarity",
+   "phrase": "like real life",
+   "effect": "less fog",
+   "value": "high",
+   "at": [
+    29,
+    43
+   ]
+  },
+  {
+   "kind": "setting",
+   "phrase": "field",
+   "effect": "field",
+   "value": "field",
+   "at": [
+    65,
+    70
+   ]
+  },
+  {
+   "kind": "setting",
+   "phrase": "grass",
+   "effect": "field",
+   "value": "field",
+   "at": [
+    79,
+    84
+   ]
+  },
+  {
+   "kind": "light",
+   "phrase": "sunset",
+   "effect": "dusk",
+   "value": "dusk",
+   "at": [
+    88,
+    94
+   ]
+  },
+  {
+   "kind": "setting",
+   "phrase": "birds",
+   "effect": "birds",
+   "value": "+birds",
+   "at": [
+    100,
+    105
+   ]
+  },
+  {
+   "kind": "motion",
+   "phrase": "flying",
+   "effect": "flying",
+   "value": "flying",
+   "at": [
+    106,
+    112
+   ]
+  },
+  {
+   "kind": "setting",
+   "phrase": "dad",
+   "effect": "a figure",
+   "value": "+figure",
+   "at": [
+    126,
+    129
+   ]
+  },
+  {
+   "kind": "mood",
+   "phrase": "far away",
+   "effect": "longing",
+   "value": "longing",
+   "at": [
+    134,
+    142
+   ]
+  },
+  {
+   "kind": "mood",
+   "phrase": "waving",
+   "effect": "longing",
+   "value": "longing",
+   "at": [
+    143,
+    149
+   ]
+  },
+  {
+   "kind": "mood",
+   "phrase": "calm",
+   "effect": "calm",
+   "value": "calm",
+   "at": [
+    167,
+    171
+   ]
+  }
+ ],
+ "overrides": {},
+ "read_by": "device",
+ "seed": 3780673897,
+ "prompt": "Crystal clear, really vivid, like real life. I was standing in a field of tall grass at sunset with birds flying over, and my dad was far away waving at me. It was so calm and warm. [field; birds, figure; dusk light; flying]. Pseudo-realistic, photographic, 35mm, muted natural colour, faint atmospheric haze, clear and sharp, film grain, gentle vignette, low frame rate 12fps, slight frame ghosting, dream logic, mood: longing, calm.",
+ "negative_prompt": "cartoon, illustration, anime, crisp HDR, oversharpened, text, captions, watermark, logo, extra limbs, distorted faces, clean digital look"
+}

@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Render outputs (frames, EXR depth, clips) - regenerate with the scripts in render/
+render/out/
+out/
+*.exr
+*.mp4
+
+# Generated review page (render/build_page.py)
+render/site/
+
+# Face models (~195 MB) - fetch with render/fetch_face_models.sh
+render/models/
+*.onnx
+*.tflite
+*.task
+
+# Research depth model
+research/**/model-small.onnx
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
