@@ -14,7 +14,7 @@ where your attention was.
 | Reel (rendered example dreams, review page) | https://claude.ai/artifact/QoCHGXEDmG7smUAy9FYo4o |
 | Atlas (dream-look research report) | https://claude.ai/artifact/RC5rDxfZ1FCWftMbTuckbX |
 
-Current version: see [`VERSION`](VERSION) and [`CHANGELOG.md`](CHANGELOG.md).
+Current version: **v1** (see [`CHANGELOG.md`](CHANGELOG.md)).
 
 ## How it fits together
 

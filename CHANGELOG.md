@@ -1,8 +1,8 @@
 # Changelog
 
-Night Reels is versioned v0.1, v0.2, … Each version is committed to `main` and tagged.
+Night Reels versions are plain numbers: v1, v2, v3… Each version is pushed to `main`.
 
-## v0.1 — 2026-11-25
+## v1 — 2026-11-25
 
 First commit of everything built so far.
 
