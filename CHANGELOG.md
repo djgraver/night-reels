@@ -2,6 +2,12 @@
 
 Night Reels versions are plain numbers: v1, v2, v3… Each version is pushed to `main`.
 
+## v2 — 2026-11-26
+
+- The app is now the site: `app/dream-log.html` moved to `index.html` at the repo root, so the GitHub Pages URL opens the app.
+- Example clips and posters for the three example dreams ship in `renders/`, so "Rendered video" works on Pages.
+- Page title and header now say Night Reels.
+
 ## v1 — 2026-11-25
 
 First commit of everything built so far.

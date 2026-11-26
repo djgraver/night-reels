@@ -6,6 +6,8 @@ where your attention was.
 
 ![The fog dial: the same night beach at fog 0.10, 0.35, 0.60 and 0.85](docs/images/fog-dial-beach.jpg)
 
+**Try it:** https://djgraver.github.io/night-reels/ (the app, served from `index.html` by GitHub Pages)
+
 **Live prototypes**
 
 | | |
@@ -14,19 +16,20 @@ where your attention was.
 | Reel (rendered example dreams, review page) | https://claude.ai/artifact/QoCHGXEDmG7smUAy9FYo4o |
 | Atlas (dream-look research report) | https://claude.ai/artifact/RC5rDxfZ1FCWftMbTuckbX |
 
-Current version: **v1** (see [`CHANGELOG.md`](CHANGELOG.md)).
+Current version: **v2** (see [`CHANGELOG.md`](CHANGELOG.md)).
 
 ## How it fits together
 
 ```
- you, half awake ──► app/dream-log.html ──► dream spec v1 (JSON) ──► render/ pipeline ──► reel (mp4 + poster)
+ you, half awake ──► index.html (app)  ──► dream spec v1 (JSON) ──► render/ pipeline ──► reel (mp4 + poster)
                      type or speak            look, scenes, people,     rate → mitigate → scenes →
                      People panel             content_rating            dream fog → low-fps clip
 ```
 
 | Folder | What's in it |
 |---|---|
-| [`app/`](app) | The app: one self-contained HTML page (journal, voice dictation, People panel, spec builder, canvas fog preview). |
+| [`index.html`](index.html) | The app: one self-contained HTML page (journal, voice dictation, People panel, spec builder, canvas fog preview). GitHub Pages serves it at the repo's Pages URL. |
+| [`renders/`](renders) | Pre-rendered clips for the app's three example dreams, listed in `renders/index.json`. |
 | [`docs/`](docs) | [`dream-spec.md`](docs/dream-spec.md), the app → renderer hand-off format, and example images. |
 | [`render/`](render) | The `dreamrender` Python pipeline: parsing, content rating, Blender scenes, stylizer, clip assembly, faces prototype, job server. Its own [README](render/README.md) has the detail. |
 | [`research/`](research) | The reference dream-look renderer from the research report (the origin of the clarity dial). |
@@ -81,9 +84,9 @@ Dreams can be anything, so every spec is rated before anything is drawn. Rules
 
 ### The app
 
-Open [`app/dream-log.html`](app/dream-log.html) in a browser, or use the published App link above. Voice dictation
+Open https://djgraver.github.io/night-reels/, or serve the repo root locally (`python3 -m http.server`) and open `index.html`. Voice dictation
 and the optional Claude close-read need the claude.ai artifact runtime; without it the page still parses typed
-dreams locally and shows the canvas fog preview. Real clips are picked up from `renders/index.json` beside the page,
+dreams locally and shows the canvas fog preview. Real clips are picked up from `renders/index.json` beside the page (the three examples ship with the repo),
 or from a render server set as `PipelineRenderer.endpoint` (see "RENDERER SEAM" in the page source).
 
 ### The render pipeline

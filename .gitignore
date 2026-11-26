@@ -27,3 +27,6 @@ research/**/model-small.onnx
 .DS_Store
 .idea/
 .vscode/
+
+# Example clips the app shows on GitHub Pages
+!renders/**/*.mp4

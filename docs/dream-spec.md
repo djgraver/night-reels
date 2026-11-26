@@ -1,7 +1,7 @@
 # Dream spec v1 (app → render pipeline hand-off)
 
 The app turns a typed or spoken dream into this JSON and hands it to a renderer.
-Source of truth: `app/dream-log.html` (search "DREAM SPEC" and "RENDERER SEAM").
+Source of truth: `index.html` (repo root) (search "DREAM SPEC" and "RENDERER SEAM").
 
 ```jsonc
 {
